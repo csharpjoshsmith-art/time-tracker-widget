@@ -39,7 +39,7 @@ function createWindow() {
   mainWindow.loadFile('src/index.html');
 
   // Optional: Open DevTools for debugging
-  mainWindow.webContents.openDevTools();
+  // mainWindow.webContents.openDevTools();
 
   mainWindow.on('close', (event) => {
     if (!app.isQuitting) {

@@ -584,8 +584,6 @@ function displayReporterTickets(issues) {
 
 // Context menu for Jira tickets
 function showJiraContextMenu(event, ticketKey) {
-    console.log('Context menu triggered for ticket:', ticketKey);
-
     // Remove any existing context menu
     const existingMenu = document.getElementById('jiraContextMenu');
     if (existingMenu) {
@@ -603,21 +601,16 @@ function showJiraContextMenu(event, ticketKey) {
     menu.style.position = 'fixed';
     menu.style.zIndex = '10000';
 
-    console.log('Menu position:', event.clientX, event.clientY);
-
     const menuItem = document.createElement('div');
     menuItem.className = 'context-menu-item';
     menuItem.textContent = '🔗 Open in Jira';
     menuItem.addEventListener('click', async () => {
-        console.log('Menu item clicked');
         await openJiraTicket(ticketKey);
         menu.remove();
     });
 
     menu.appendChild(menuItem);
     document.body.appendChild(menu);
-
-    console.log('Context menu added to body');
 
     // Close menu when clicking elsewhere
     const closeMenu = (e) => {
