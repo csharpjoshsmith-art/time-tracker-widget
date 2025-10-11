@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f7fa;
+            padding: 30px;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 25px;
+            font-size: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #2c3e50;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .help-text {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+
+        .help-link {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .help-link:hover {
+            text-decoration: underline;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .save-btn {
+            background: #667eea;
+            color: white;
+        }
+
+        .save-btn:hover:not(:disabled) {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .cancel-btn {
+            background: #e0e0e0;
+            color: #2c3e50;
+        }
+
+        .cancel-btn:hover {
+            background: #d0d0d0;
+        }
+
+        .test-btn {
+            background: #27ae60;
+            color: white;
+            margin-top: 10px;
+        }
+
+        .test-btn:hover:not(:disabled) {
+            background: #229954;
+        }
+
+        .status-message {
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 15px;
+            text-align: center;
+            font-size: 14px;
+            display: none;
+        }
+
+        .status-message.success {
+            background: #d4edda;
+            color: #155724;
+            display: block;
+        }
+
+        .status-message.error {
+            background: #f8d7da;
+            color: #721c24;
+            display: block;
+        }
+
+        .info-box {
+            background: #e8f4f8;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        .info-box h3 {
+            font-size: 14px;
+            margin-bottom: 8px;
+            color: #2c3e50;
+        }
+
+        .info-box p {
+            font-size: 13px;
+            color: #555;
+            line-height: 1.6;
+        }
+
+        .info-box ol {
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+
+        .info-box li {
+            font-size: 13px;
+            color: #555;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚙️ Settings</h1>
+
+        <h2 style="font-size: 18px; color: #6264A7; margin: 20px 0 15px 0; border-bottom: 2px solid #6264A7; padding-bottom: 8px;">📞 Microsoft Teams Integration</h2>
+
+        <div class="info-box">
+            <h3>Teams Call Tracking:</h3>
+            <p>The app monitors your screen for Teams calls and automatically tracks time. No additional setup required for basic functionality!</p>
+            <p style="margin-top: 10px;"><strong>Optional:</strong> For meeting details (title, participants), register an Azure AD app:</p>
+            <ol style="font-size: 12px;">
+                <li>Visit <a href="https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationsListBlade" target="_blank" class="help-link">Azure Portal</a></li>
+                <li>Create new app registration, enable "Public client/native" flow</li>
+                <li>Add permissions: Calendars.Read, OnlineMeetings.Read</li>
+                <li>Copy Client ID, Tenant ID below</li>
+            </ol>
+        </div>
+
+        <div class="form-group">
+            <label>
+                <input type="checkbox" id="teamsAutoTrack" style="width: auto; margin-right: 8px;">
+                Automatically track Teams calls
+            </label>
+            <div class="help-text">When enabled, timer starts automatically when you join a call</div>
+        </div>
+
+        <div class="form-group">
+            <label for="teamsClientId">Azure Client ID (Optional)</label>
+            <input
+                type="text"
+                id="teamsClientId"
+                placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+            >
+            <div class="help-text">Required for meeting details from calendar</div>
+        </div>
+
+        <div class="form-group">
+            <label for="teamsTenantId">Azure Tenant ID (Optional)</label>
+            <input
+                type="text"
+                id="teamsTenantId"
+                placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+            >
+        </div>
+
+        <div class="form-group">
+            <label for="teamsClientSecret">Azure Client Secret (Optional)</label>
+            <input
+                type="password"
+                id="teamsClientSecret"
+                placeholder="Your client secret"
+            >
+        </div>
+
+        <button type="button" class="test-btn" id="teamsAuthBtn" style="background: #6264A7;">🔐 Authenticate with Teams</button>
+
+        <h2 style="font-size: 18px; color: #667eea; margin: 30px 0 15px 0; border-bottom: 2px solid #667eea; padding-bottom: 8px;">🎫 Jira Integration</h2>
+
+        <div class="info-box">
+            <h3>How to get your Jira API Token:</h3>
+            <ol>
+                <li>Go to <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" class="help-link">Atlassian API Tokens</a></li>
+                <li>Click "Create API token"</li>
+                <li>Give it a name (e.g., "Time Tracker")</li>
+                <li>Copy the token and paste it below</li>
+            </ol>
+        </div>
+
+        <div class="form-group">
+            <label for="jiraDomain">Jira Domain</label>
+            <input 
+                type="text" 
+                id="jiraDomain" 
+                placeholder="yourcompany.atlassian.net"
+            >
+            <div class="help-text">Enter your Jira domain without https://</div>
+        </div>
+
+        <div class="form-group">
+            <label for="jiraEmail">Jira Email</label>
+            <input 
+                type="email" 
+                id="jiraEmail" 
+                placeholder="your.email@company.com"
+            >
+            <div class="help-text">The email you use to login to Jira</div>
+        </div>
+
+        <div class="form-group">
+            <label for="jiraApiToken">Jira API Token</label>
+            <input 
+                type="password" 
+                id="jiraApiToken" 
+                placeholder="Your API token"
+            >
+            <div class="help-text">
+                <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" class="help-link">
+                    Get your API token here
+                </a>
+            </div>
+        </div>
+
+        <button type="button" class="test-btn" id="testBtn">🔍 Test Connection</button>
+
+        <div id="statusMessage" class="status-message"></div>
+
+        <div class="button-group">
+            <button type="button" class="save-btn" id="saveBtn">💾 Save Settings</button>
+            <button type="button" class="cancel-btn" id="cancelBtn">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+        const axios = require('axios');
+
+        console.log('Settings page loaded');
+
+        // Load existing settings
+        loadSettings();
+
+        async function loadSettings() {
+            try {
+                console.log('Loading settings...');
+                const jiraSettings = await ipcRenderer.invoke('store-get', 'jiraSettings');
+                const teamsSettings = await ipcRenderer.invoke('store-get', 'teamsSettings');
+
+                console.log('Loaded jira settings:', jiraSettings);
+                console.log('Loaded teams settings:', teamsSettings);
+
+                if (jiraSettings) {
+                    document.getElementById('jiraDomain').value = jiraSettings.domain || '';
+                    document.getElementById('jiraEmail').value = jiraSettings.email || '';
+                    document.getElementById('jiraApiToken').value = jiraSettings.apiToken || '';
+                }
+
+                if (teamsSettings) {
+                    document.getElementById('teamsAutoTrack').checked = teamsSettings.autoTrack !== false;
+                    document.getElementById('teamsClientId').value = teamsSettings.clientId || '';
+                    document.getElementById('teamsTenantId').value = teamsSettings.tenantId || '';
+                    document.getElementById('teamsClientSecret').value = teamsSettings.clientSecret || '';
+                } else {
+                    // Default to auto-track enabled
+                    document.getElementById('teamsAutoTrack').checked = true;
+                }
+            } catch (error) {
+                console.error('Error loading settings:', error);
+            }
+        }
+
+        // Test connection
+        document.getElementById('testBtn').addEventListener('click', async () => {
+            const domain = document.getElementById('jiraDomain').value.trim();
+            const email = document.getElementById('jiraEmail').value.trim();
+            const apiToken = document.getElementById('jiraApiToken').value.trim();
+            
+            if (!domain || !email || !apiToken) {
+                showStatus('Please fill in all fields', 'error');
+                return;
+            }
+
+            const testBtn = document.getElementById('testBtn');
+            testBtn.disabled = true;
+            testBtn.textContent = '⏳ Testing...';
+            showStatus('Testing connection...', 'success');
+
+            try {
+                const auth = Buffer.from(`${email}:${apiToken}`).toString('base64');
+                
+                const response = await axios({
+                    method: 'get',
+                    url: `https://${domain}/rest/api/3/myself`,
+                    headers: {
+                        'Authorization': `Basic ${auth}`,
+                        'Accept': 'application/json'
+                    },
+                    timeout: 10000
+                });
+
+                showStatus(`✅ Connected successfully! Hello, ${response.data.displayName}`, 'success');
+            } catch (error) {
+                console.error('Test failed:', error);
+                if (error.response) {
+                    showStatus(`❌ Connection failed: ${error.response.status} - Check your credentials`, 'error');
+                } else if (error.code === 'ENOTFOUND') {
+                    showStatus('❌ Domain not found. Check your Jira domain', 'error');
+                } else if (error.code === 'ETIMEDOUT') {
+                    showStatus('❌ Connection timeout. Check your internet connection', 'error');
+                } else {
+                    showStatus(`❌ Connection failed: ${error.message}`, 'error');
+                }
+            } finally {
+                testBtn.disabled = false;
+                testBtn.textContent = '🔍 Test Connection';
+            }
+        });
+
+        // Teams authentication
+        document.getElementById('teamsAuthBtn').addEventListener('click', async () => {
+            const clientId = document.getElementById('teamsClientId').value.trim();
+            const tenantId = document.getElementById('teamsTenantId').value.trim();
+            const clientSecret = document.getElementById('teamsClientSecret').value.trim();
+
+            if (!clientId || !tenantId || !clientSecret) {
+                showStatus('Please fill in Azure credentials to authenticate', 'error');
+                return;
+            }
+
+            const authBtn = document.getElementById('teamsAuthBtn');
+            authBtn.disabled = true;
+            authBtn.textContent = '⏳ Authenticating...';
+
+            try {
+                const result = await ipcRenderer.invoke('teams-authenticate', {
+                    clientId,
+                    tenantId,
+                    clientSecret
+                });
+
+                if (result.success) {
+                    // Save access token
+                    const teamsSettings = {
+                        autoTrack: document.getElementById('teamsAutoTrack').checked,
+                        clientId,
+                        tenantId,
+                        clientSecret,
+                        accessToken: result.accessToken,
+                        enabled: true
+                    };
+                    await ipcRenderer.invoke('store-set', 'teamsSettings', teamsSettings);
+                    showStatus('✅ Teams authenticated successfully!', 'success');
+                } else {
+                    showStatus(`❌ Authentication failed: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('Auth error:', error);
+                showStatus(`❌ Authentication failed: ${error.message}`, 'error');
+            } finally {
+                authBtn.disabled = false;
+                authBtn.textContent = '🔐 Authenticate with Teams';
+            }
+        });
+
+        // Save settings
+        document.getElementById('saveBtn').addEventListener('click', async () => {
+            const domain = document.getElementById('jiraDomain').value.trim();
+            const email = document.getElementById('jiraEmail').value.trim();
+            const apiToken = document.getElementById('jiraApiToken').value.trim();
+
+            // Save Jira settings if provided
+            if (domain && email && apiToken) {
+                const jiraSettings = {
+                    domain: domain,
+                    email: email,
+                    apiToken: apiToken
+                };
+
+                try {
+                    await ipcRenderer.invoke('store-set', 'jiraSettings', jiraSettings);
+                } catch (error) {
+                    console.error('Error saving Jira settings:', error);
+                    showStatus('❌ Error saving Jira settings', 'error');
+                    return;
+                }
+            }
+
+            // Save Teams settings
+            const teamsAutoTrack = document.getElementById('teamsAutoTrack').checked;
+            const teamsClientId = document.getElementById('teamsClientId').value.trim();
+            const teamsTenantId = document.getElementById('teamsTenantId').value.trim();
+            const teamsClientSecret = document.getElementById('teamsClientSecret').value.trim();
+
+            const existingTeamsSettings = await ipcRenderer.invoke('store-get', 'teamsSettings') || {};
+
+            const teamsSettings = {
+                ...existingTeamsSettings,
+                autoTrack: teamsAutoTrack,
+                clientId: teamsClientId || existingTeamsSettings.clientId,
+                tenantId: teamsTenantId || existingTeamsSettings.tenantId,
+                clientSecret: teamsClientSecret || existingTeamsSettings.clientSecret,
+                enabled: true
+            };
+
+            try {
+                await ipcRenderer.invoke('store-set', 'teamsSettings', teamsSettings);
+                // Also update localStorage for renderer process
+                localStorage.setItem('teamsAutoTrack', teamsAutoTrack);
+                showStatus('✅ Settings saved successfully!', 'success');
+
+                setTimeout(() => {
+                    window.close();
+                }, 1500);
+            } catch (error) {
+                console.error('Error saving settings:', error);
+                showStatus('❌ Error saving settings', 'error');
+            }
+        });
+
+        // Cancel
+        document.getElementById('cancelBtn').addEventListener('click', () => {
+            window.close();
+        });
+
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.textContent = message;
+            statusDiv.className = `status-message ${type}`;
+        }
+    </script>
+</body>
+</html>

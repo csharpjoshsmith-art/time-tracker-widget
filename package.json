@@ -1,0 +1,39 @@
+{
+  "name": "time-tracker-widget",
+  "version": "1.0.0",
+  "description": "Desktop time tracking widget with Jira integration",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build-win": "electron-builder --win"
+  },
+  "keywords": [
+    "time-tracker",
+    "jira",
+    "productivity"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^38.2.2",
+    "electron-builder": "^24.9.1"
+  },
+  "dependencies": {
+    "@azure/msal-node": "^3.8.0",
+    "@electron/remote": "^2.1.3",
+    "@microsoft/microsoft-graph-client": "^3.0.7",
+    "active-win": "^8.2.1",
+    "axios": "^1.6.0",
+    "electron-store": "^8.1.0",
+    "node-fetch": "^2.7.0"
+  },
+  "build": {
+    "appId": "com.yourcompany.timetracker",
+    "productName": "Time Tracker",
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    }
+  }
+}
