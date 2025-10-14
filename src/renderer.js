@@ -31,7 +31,9 @@ init();
 
 async function init() {
     loadCustomTasks();
+    loadRecentTasks();
     updateTodaySummary();
+    updateWeekSummary();
     checkJiraConfiguration();
     checkReporterConfiguration();
     setupEventListeners();
@@ -71,6 +73,70 @@ function setupEventListeners() {
         }
     });
     exportReportBtn.addEventListener('click', exportReport);
+
+    // Event delegation for time entry edit/delete buttons (Today's Summary)
+    document.getElementById('todaySummary').addEventListener('click', async (e) => {
+        const button = e.target.closest('.entry-action-btn');
+        if (!button) return;
+
+        const entryElement = button.closest('.summary-entry');
+        if (!entryElement) return;
+
+        const entryId = parseInt(entryElement.dataset.entryId);
+        const action = button.dataset.action;
+
+        if (action === 'edit') {
+            await editTimeEntry(entryId);
+        } else if (action === 'delete') {
+            await deleteTimeEntry(entryId);
+        }
+    });
+
+    // Event delegation for time entry edit/delete buttons (Week Summary)
+    document.getElementById('weekSummary').addEventListener('click', async (e) => {
+        const button = e.target.closest('.entry-action-btn');
+        if (!button) return;
+
+        const entryElement = button.closest('.summary-entry');
+        if (!entryElement) return;
+
+        const entryId = parseInt(entryElement.dataset.entryId);
+        const action = button.dataset.action;
+
+        if (action === 'edit') {
+            await editTimeEntry(entryId);
+        } else if (action === 'delete') {
+            await deleteTimeEntry(entryId);
+        }
+    });
+
+    // Edit Entry Modal handlers
+    document.querySelector('.close-edit').addEventListener('click', closeEditModal);
+    document.getElementById('cancelEditBtn').addEventListener('click', closeEditModal);
+    document.getElementById('saveEditBtn').addEventListener('click', saveEditedEntry);
+
+    // Delete Confirmation Modal handlers
+    document.querySelector('.close-delete').addEventListener('click', closeDeleteModal);
+    document.getElementById('cancelDeleteBtn').addEventListener('click', closeDeleteModal);
+    document.getElementById('confirmDeleteBtn').addEventListener('click', confirmDelete);
+
+    // Close modals when clicking outside
+    window.addEventListener('click', (e) => {
+        const editModal = document.getElementById('editEntryModal');
+        const deleteModal = document.getElementById('deleteConfirmModal');
+
+        if (e.target === editModal) {
+            closeEditModal();
+        }
+        if (e.target === deleteModal) {
+            closeDeleteModal();
+        }
+    });
+
+    // Allow Enter key to save in edit modal
+    document.getElementById('editMinutes').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') saveEditedEntry();
+    });
 }
 
 function startTask(taskName) {
@@ -175,7 +241,7 @@ function updateTimer() {
 
 async function saveTimeEntry(task, durationSeconds) {
     const entries = await ipcRenderer.invoke('store-get', 'timeEntries') || [];
-    
+
     const entry = {
         id: Date.now(),
         task: task,
@@ -186,48 +252,165 @@ async function saveTimeEntry(task, durationSeconds) {
 
     entries.push(entry);
     await ipcRenderer.invoke('store-set', 'timeEntries', entries);
+
+    // Update recent tasks when a task is completed
+    await updateRecentTasks(task);
+}
+
+async function updateRecentTasks(taskName) {
+    let recentTasks = await ipcRenderer.invoke('store-get', 'recentTasks') || [];
+
+    // Remove task if it already exists (to move it to the front)
+    recentTasks = recentTasks.filter(t => t !== taskName);
+
+    // Add task to the beginning
+    recentTasks.unshift(taskName);
+
+    // Keep only the 5 most recent
+    recentTasks = recentTasks.slice(0, 5);
+
+    await ipcRenderer.invoke('store-set', 'recentTasks', recentTasks);
+
+    // Refresh the display
+    loadRecentTasks();
+}
+
+async function loadRecentTasks() {
+    const recentTasks = await ipcRenderer.invoke('store-get', 'recentTasks') || [];
+    const container = document.getElementById('recentTasks');
+
+    if (recentTasks.length === 0) {
+        container.innerHTML = '<div class="empty-message">No recent tasks</div>';
+        return;
+    }
+
+    container.innerHTML = '';
+
+    recentTasks.forEach(task => {
+        const btn = document.createElement('button');
+        btn.className = 'task-btn recent-task-btn';
+        btn.textContent = task;
+        btn.addEventListener('click', () => startTask(task));
+        container.appendChild(btn);
+    });
 }
 
 async function updateTodaySummary() {
     const entries = await ipcRenderer.invoke('store-get', 'timeEntries') || [];
     const today = new Date().toDateString();
-    
-    const todayEntries = entries.filter(entry => 
+
+    const todayEntries = entries.filter(entry =>
         new Date(entry.date).toDateString() === today
     );
 
     const summaryBox = document.getElementById('todaySummary');
-    
+
     if (todayEntries.length === 0) {
         summaryBox.innerHTML = '<p>No time tracked today</p>';
         return;
     }
 
-    // Group by task
-    const taskTotals = {};
-    todayEntries.forEach(entry => {
-        if (!taskTotals[entry.task]) {
-            taskTotals[entry.task] = 0;
-        }
-        taskTotals[entry.task] += entry.duration;
-    });
+    // Sort by most recent first
+    todayEntries.sort((a, b) => b.timestamp - a.timestamp);
 
-    let html = '';
+    let html = '<div class="summary-entries">';
     let totalSeconds = 0;
 
-    Object.entries(taskTotals).forEach(([task, seconds]) => {
-        totalSeconds += seconds;
+    todayEntries.forEach(entry => {
+        totalSeconds += entry.duration;
+        const time = new Date(entry.date).toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
         html += `
-            <div class="summary-item">
-                <span>${task}</span>
-                <span>${formatDuration(seconds)}</span>
+            <div class="summary-entry" data-entry-id="${entry.id}">
+                <div class="entry-details">
+                    <span class="entry-time">${time}</span>
+                    <span class="entry-task">${entry.task}</span>
+                    <span class="entry-duration">${formatDuration(entry.duration)}</span>
+                </div>
+                <div class="entry-actions">
+                    <button class="entry-action-btn edit-btn" data-action="edit" title="Edit duration">✏️</button>
+                    <button class="entry-action-btn delete-btn" data-action="delete" title="Delete entry">🗑️</button>
+                </div>
             </div>
         `;
     });
 
+    html += '</div>';
     html += `
-        <div class="summary-item">
+        <div class="summary-total">
             <span>Total Today</span>
+            <span>${formatDuration(totalSeconds)}</span>
+        </div>
+    `;
+
+    summaryBox.innerHTML = html;
+}
+
+async function updateWeekSummary() {
+    const entries = await ipcRenderer.invoke('store-get', 'timeEntries') || [];
+
+    // Get current week (Saturday to Friday)
+    const now = new Date();
+    const currentDay = now.getDay();
+    const daysSinceSaturday = currentDay === 6 ? 0 : (currentDay + 1);
+
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - daysSinceSaturday);
+    weekStart.setHours(0, 0, 0, 0);
+
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 7);
+
+    // Update week range display
+    const weekRangeText = `(${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${new Date(weekEnd.getTime() - 1).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`;
+    document.getElementById('weekRange').textContent = weekRangeText;
+
+    const weekEntries = entries.filter(entry => {
+        const entryDate = new Date(entry.date);
+        return entryDate >= weekStart && entryDate < weekEnd;
+    });
+
+    const summaryBox = document.getElementById('weekSummary');
+
+    if (weekEntries.length === 0) {
+        summaryBox.innerHTML = '<p>No time tracked this week</p>';
+        return;
+    }
+
+    // Sort by date, most recent first
+    weekEntries.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    let html = '<div class="summary-entries">';
+    let totalSeconds = 0;
+
+    weekEntries.forEach(entry => {
+        totalSeconds += entry.duration;
+        const date = new Date(entry.date).toLocaleDateString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric'
+        });
+        html += `
+            <div class="summary-entry" data-entry-id="${entry.id}">
+                <div class="entry-details">
+                    <span class="entry-time">${date}</span>
+                    <span class="entry-task">${entry.task}</span>
+                    <span class="entry-duration">${formatDuration(entry.duration)}</span>
+                </div>
+                <div class="entry-actions">
+                    <button class="entry-action-btn edit-btn" data-action="edit" title="Edit entry">✏️</button>
+                    <button class="entry-action-btn delete-btn" data-action="delete" title="Delete entry">🗑️</button>
+                </div>
+            </div>
+        `;
+    });
+
+    html += '</div>';
+    html += `
+        <div class="summary-total">
+            <span>Total This Week</span>
             <span>${formatDuration(totalSeconds)}</span>
         </div>
     `;
@@ -656,60 +839,76 @@ async function openSettings() {
 
 async function showWeeklyReport() {
     const entries = await ipcRenderer.invoke('store-get', 'timeEntries') || [];
-    
-    // Get current week (Friday to Friday)
+
+    // Get current week (Saturday to Friday)
     const now = new Date();
-    const currentDay = now.getDay(); // 0 = Sunday, 5 = Friday
-    const daysSinceFriday = currentDay >= 5 ? currentDay - 5 : currentDay + 2;
-    
+    const currentDay = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+
+    // Calculate days since last Saturday
+    // If today is Saturday (6), daysSinceSaturday = 0
+    // If today is Sunday (0), daysSinceSaturday = 1
+    // If today is Monday (1), daysSinceSaturday = 2, etc.
+    const daysSinceSaturday = currentDay === 6 ? 0 : (currentDay + 1);
+
     const weekStart = new Date(now);
-    weekStart.setDate(now.getDate() - daysSinceFriday);
+    weekStart.setDate(now.getDate() - daysSinceSaturday);
     weekStart.setHours(0, 0, 0, 0);
-    
+
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 7);
-    
+    weekEnd.setHours(0, 0, 0, 0);
+
     const weekEntries = entries.filter(entry => {
         const entryDate = new Date(entry.date);
         return entryDate >= weekStart && entryDate < weekEnd;
     });
-    
-    // Group by task
-    const taskTotals = {};
-    weekEntries.forEach(entry => {
-        if (!taskTotals[entry.task]) {
-            taskTotals[entry.task] = 0;
-        }
-        taskTotals[entry.task] += entry.duration;
-    });
-    
-    // Sort by duration
-    const sorted = Object.entries(taskTotals).sort((a, b) => b[1] - a[1]);
-    
+
+    // Sort entries by date, then by task
+    weekEntries.sort((a, b) => new Date(a.date) - new Date(b.date));
+
     let html = `
         <div class="report-week">
             <h3>Week of ${weekStart.toLocaleDateString()} - ${weekEnd.toLocaleDateString()}</h3>
+            <div class="report-entries">
+                <table class="report-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Task</th>
+                            <th>Duration</th>
+                        </tr>
+                    </thead>
+                    <tbody>
     `;
-    
+
     let totalSeconds = 0;
-    sorted.forEach(([task, seconds]) => {
-        totalSeconds += seconds;
+    weekEntries.forEach(entry => {
+        totalSeconds += entry.duration;
+        const date = new Date(entry.date).toLocaleDateString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric'
+        });
         html += `
-            <div class="report-task">
-                <span>${task}</span>
-                <span>${formatDuration(seconds)}</span>
-            </div>
+            <tr>
+                <td>${date}</td>
+                <td>${entry.task}</td>
+                <td>${formatDuration(entry.duration)}</td>
+            </tr>
         `;
     });
-    
+
     html += `
+                    </tbody>
+                </table>
+            </div>
             <div class="report-total">
                 <span>Total Week</span>
                 <span>${formatDuration(totalSeconds)}</span>
             </div>
         </div>
     `;
-    
+
     document.getElementById('reportContent').innerHTML = html;
     reportModal.style.display = 'block';
 }
@@ -717,31 +916,35 @@ async function showWeeklyReport() {
 async function exportReport() {
     const entries = await ipcRenderer.invoke('store-get', 'timeEntries') || [];
     
-    // Get current week
+    // Get current week (Saturday to Friday)
     const now = new Date();
-    const currentDay = now.getDay();
-    const daysSinceFriday = currentDay >= 5 ? currentDay - 5 : currentDay + 2;
-    
+    const currentDay = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+
+    // Calculate days since last Saturday
+    const daysSinceSaturday = currentDay === 6 ? 0 : (currentDay + 1);
+
     const weekStart = new Date(now);
-    weekStart.setDate(now.getDate() - daysSinceFriday);
+    weekStart.setDate(now.getDate() - daysSinceSaturday);
     weekStart.setHours(0, 0, 0, 0);
-    
+
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 7);
+    weekEnd.setHours(0, 0, 0, 0);
     
     const weekEntries = entries.filter(entry => {
         const entryDate = new Date(entry.date);
         return entryDate >= weekStart && entryDate < weekEnd;
     });
     
-    // Create CSV
-    let csv = 'Task,Date,Duration (hours),Duration (minutes)\n';
-    
+    // Create CSV with better formatting
+    let csv = 'Date,Task,Duration (hours),Duration (minutes)\n';
+
     weekEntries.forEach(entry => {
         const hours = (entry.duration / 3600).toFixed(2);
         const minutes = Math.round(entry.duration / 60);
-        const date = new Date(entry.date).toLocaleDateString();
-        csv += `"${entry.task}","${date}","${hours}","${minutes}"\n`;
+        // Format date as YYYY-MM-DD for better sorting in Excel
+        const date = new Date(entry.date).toISOString().split('T')[0];
+        csv += `"${date}","${entry.task}","${hours}","${minutes}"\n`;
     });
     
     // Download CSV
@@ -756,6 +959,138 @@ async function exportReport() {
 
 // Make deleteCustomTask available globally
 window.deleteCustomTask = deleteCustomTask;
+
+// ==========================================
+// TIME ENTRY MANAGEMENT
+// ==========================================
+
+let currentEditingEntryId = null;
+
+async function editTimeEntry(entryId) {
+    const entries = await ipcRenderer.invoke('store-get', 'timeEntries') || [];
+    const entry = entries.find(e => e.id === entryId);
+
+    if (!entry) {
+        alert('Entry not found');
+        return;
+    }
+
+    // Store the entry ID for later
+    currentEditingEntryId = entryId;
+
+    // Convert current duration to hours and minutes
+    const currentHours = Math.floor(entry.duration / 3600);
+    const currentMinutes = Math.floor((entry.duration % 3600) / 60);
+
+    // Format date for input (YYYY-MM-DD)
+    const entryDate = new Date(entry.date);
+    const dateString = entryDate.toISOString().split('T')[0];
+
+    // Populate the modal
+    document.getElementById('editEntryTask').textContent = entry.task;
+    document.getElementById('editDate').value = dateString;
+    document.getElementById('editHours').value = currentHours;
+    document.getElementById('editMinutes').value = currentMinutes;
+
+    // Show the modal
+    document.getElementById('editEntryModal').style.display = 'block';
+
+    // Focus on hours input
+    setTimeout(() => {
+        document.getElementById('editHours').focus();
+        document.getElementById('editHours').select();
+    }, 100);
+}
+
+async function saveEditedEntry() {
+    const entries = await ipcRenderer.invoke('store-get', 'timeEntries') || [];
+    const entry = entries.find(e => e.id === currentEditingEntryId);
+
+    if (!entry) {
+        alert('Entry not found');
+        closeEditModal();
+        return;
+    }
+
+    const newDateValue = document.getElementById('editDate').value;
+    const newHours = parseInt(document.getElementById('editHours').value) || 0;
+    const newMinutes = parseInt(document.getElementById('editMinutes').value) || 0;
+    const newDuration = (newHours * 3600) + (newMinutes * 60);
+
+    if (!newDateValue) {
+        alert('Please select a date');
+        return;
+    }
+
+    if (newDuration <= 0) {
+        alert('Duration must be greater than 0');
+        return;
+    }
+
+    // Update the entry with new date and duration
+    const newDate = new Date(newDateValue);
+    // Preserve the original time component
+    const originalDate = new Date(entry.date);
+    newDate.setHours(originalDate.getHours(), originalDate.getMinutes(), originalDate.getSeconds());
+
+    entry.date = newDate.toISOString();
+    entry.duration = newDuration;
+    await ipcRenderer.invoke('store-set', 'timeEntries', entries);
+
+    // Close modal and refresh both summaries
+    closeEditModal();
+    updateTodaySummary();
+    updateWeekSummary();
+}
+
+function closeEditModal() {
+    document.getElementById('editEntryModal').style.display = 'none';
+    currentEditingEntryId = null;
+}
+
+let currentDeletingEntryId = null;
+
+async function deleteTimeEntry(entryId) {
+    const entries = await ipcRenderer.invoke('store-get', 'timeEntries') || [];
+    const entry = entries.find(e => e.id === entryId);
+
+    if (!entry) {
+        alert('Entry not found');
+        return;
+    }
+
+    // Store the entry ID for later
+    currentDeletingEntryId = entryId;
+
+    // Populate the modal
+    document.getElementById('deleteEntryTask').textContent = entry.task;
+    document.getElementById('deleteEntryDuration').textContent = formatDuration(entry.duration);
+
+    // Show the modal
+    document.getElementById('deleteConfirmModal').style.display = 'block';
+}
+
+async function confirmDelete() {
+    const entries = await ipcRenderer.invoke('store-get', 'timeEntries') || [];
+
+    // Remove the entry
+    const filteredEntries = entries.filter(e => e.id !== currentDeletingEntryId);
+    await ipcRenderer.invoke('store-set', 'timeEntries', filteredEntries);
+
+    // Close modal and refresh both displays
+    closeDeleteModal();
+    updateTodaySummary();
+    updateWeekSummary();
+}
+
+function closeDeleteModal() {
+    document.getElementById('deleteConfirmModal').style.display = 'none';
+    currentDeletingEntryId = null;
+}
+
+// Make functions available globally
+window.editTimeEntry = editTimeEntry;
+window.deleteTimeEntry = deleteTimeEntry;
 
 // ==========================================
 // TEAMS INTEGRATION

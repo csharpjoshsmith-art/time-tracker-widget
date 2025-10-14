@@ -1,5 +1,4 @@
 const activeWin = require('active-win');
-const { ipcMain } = require('electron');
 
 class TeamsCallMonitor {
   constructor(store) {
@@ -9,6 +8,7 @@ class TeamsCallMonitor {
     this.checkInterval = null;
     this.callStartTime = null;
     this.mainWindow = null;
+    this.teamsNotSeenCount = 0;
   }
 
   setMainWindow(window) {
@@ -32,17 +32,43 @@ class TeamsCallMonitor {
     try {
       const window = await activeWin();
 
-      if (!window) return;
+      if (!window) {
+        // No active window - if we were in a call, end it
+        if (this.isInCall) {
+          console.log('No active window detected, ending call');
+          this.handleCallEnd();
+        }
+        return;
+      }
 
       // Check if Teams is the active window
       const isTeamsWindow = window.owner?.name?.toLowerCase().includes('teams') ||
                            window.title?.toLowerCase().includes('teams');
 
+      // If not a Teams window
       if (!isTeamsWindow) {
-        // If we were in a call and Teams is no longer active, still monitor
-        // (call might be minimized)
+        // If we were in a call and Teams is no longer active for more than one check,
+        // assume the call ended
+        if (this.isInCall) {
+          // Mark that we haven't seen Teams, increment counter
+          if (!this.teamsNotSeenCount) {
+            this.teamsNotSeenCount = 1;
+          } else {
+            this.teamsNotSeenCount++;
+          }
+
+          // If Teams hasn't been active for 3 consecutive checks (9 seconds), end the call
+          if (this.teamsNotSeenCount >= 3) {
+            console.log('Teams window not active for 9+ seconds, ending call');
+            this.handleCallEnd();
+            this.teamsNotSeenCount = 0;
+          }
+        }
         return;
       }
+
+      // Reset the counter when we see Teams again
+      this.teamsNotSeenCount = 0;
 
       // Detect if in a call based on window title patterns
       // Use smart detection to avoid false positives

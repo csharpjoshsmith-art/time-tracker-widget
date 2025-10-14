@@ -1,18 +1,9 @@
 const { app, BrowserWindow, ipcMain, Tray, Menu } = require('electron');
 const path = require('path');
 const Store = require('electron-store');
-const remoteMain = require('@electron/remote/main');
 const os = require('os');
 
-// Use macOS-specific monitor on macOS, regular monitor on other platforms
-const TeamsCallMonitor = os.platform() === 'darwin'
-  ? require('./teams-monitor-macos')
-  : require('./teams-monitor');
-
 const teamsGraphService = require('./teams-graph-service');
-
-// Initialize remote module
-remoteMain.initialize();
 
 const store = new Store();
 let mainWindow;
@@ -21,20 +12,16 @@ let teamsMonitor;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 450,
+    width: 900,
     height: 700,
     resizable: true,
     frame: true,
     webPreferences: {
       nodeIntegration: true,
-      contextIsolation: false,
-      enableRemoteModule: true
+      contextIsolation: false
     },
     icon: path.join(__dirname, 'assets/icon.png')
   });
-
-  // Enable remote module for this window - MUST be before loadFile
-  remoteMain.enable(mainWindow.webContents);
 
   mainWindow.loadFile('src/index.html');
 
@@ -83,6 +70,11 @@ app.whenReady().then(() => {
   // createTray(); // Uncomment when you add tray icon
 
   // Initialize Teams call monitoring
+  // Lazy-load the monitor after app is ready
+  const TeamsCallMonitor = os.platform() === 'darwin'
+    ? require('./teams-monitor-macos')
+    : require('./teams-monitor');
+
   teamsMonitor = new TeamsCallMonitor(store);
   teamsMonitor.setMainWindow(mainWindow);
 

@@ -12,7 +12,7 @@ body {
 }
 
 .container {
-    max-width: 450px;
+    max-width: 900px;
     margin: 0 auto;
     background: white;
     border-radius: 12px;
@@ -36,6 +36,12 @@ h3 {
     font-size: 16px;
     color: #555;
     margin-bottom: 10px;
+}
+
+.week-range {
+    font-size: 14px;
+    font-weight: normal;
+    color: #999;
 }
 
 .icon-btn {
@@ -126,7 +132,7 @@ h3 {
 
 .task-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 8px;
 }
 
@@ -178,6 +184,24 @@ h3 {
 
 .delete-task-btn:hover {
     background: #e74c3c;
+}
+
+.empty-message {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 20px;
+    color: #999;
+    font-size: 14px;
+    font-style: italic;
+}
+
+.recent-tasks {
+    min-height: 60px;
+}
+
+.recent-task-btn {
+    background: linear-gradient(135deg, #f8f9ff 0%, #e8eaff 100%);
+    border-color: #b8beff;
 }
 
 .jira-ticket {
@@ -267,6 +291,91 @@ h3 {
     padding: 15px;
     border-radius: 8px;
     font-size: 14px;
+}
+
+.summary-entries {
+    margin-bottom: 10px;
+}
+
+.summary-entry {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid #e0e0e0;
+    transition: background 0.2s;
+}
+
+.summary-entry:hover {
+    background: #fff;
+}
+
+.entry-details {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex: 1;
+}
+
+.entry-time {
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    color: #999;
+    min-width: 60px;
+}
+
+.entry-task {
+    flex: 1;
+    font-size: 13px;
+    color: #333;
+}
+
+.entry-duration {
+    font-weight: 600;
+    color: #667eea;
+    min-width: 60px;
+    text-align: right;
+}
+
+.entry-actions {
+    display: flex;
+    gap: 4px;
+    margin-left: 8px;
+}
+
+.entry-action-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s;
+    opacity: 0.6;
+}
+
+.entry-action-btn:hover {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+.edit-btn:hover {
+    background: #fff3cd;
+}
+
+.delete-btn:hover {
+    background: #f8d7da;
+}
+
+.summary-total {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 10px;
+    font-weight: 700;
+    font-size: 16px;
+    color: #667eea;
+    border-top: 2px solid #667eea;
+    margin-top: 8px;
 }
 
 .summary-item {
@@ -367,11 +476,189 @@ h3 {
     padding: 15px 20px;
     border-top: 1px solid #e0e0e0;
     text-align: right;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.modal-small {
+    max-width: 400px;
+}
+
+.edit-task-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #667eea;
+    margin-bottom: 20px;
+    padding: 10px;
+    background: #f8f9ff;
+    border-radius: 6px;
+}
+
+.edit-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #555;
+}
+
+.form-group input[type="number"],
+.form-group input[type="date"] {
+    padding: 10px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 16px;
+    font-family: 'Courier New', monospace;
+}
+
+.form-group input[type="number"]:focus,
+.form-group input[type="date"]:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.secondary-btn {
+    padding: 10px 20px;
+    background: #e0e0e0;
+    color: #333;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.secondary-btn:hover {
+    background: #d0d0d0;
+}
+
+.close-edit,
+.close-delete {
+    color: #aaa;
+    font-size: 32px;
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 20px;
+}
+
+.close-edit:hover,
+.close-edit:focus,
+.close-delete:hover,
+.close-delete:focus {
+    color: #000;
+}
+
+.delete-warning {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.warning-icon {
+    font-size: 48px;
+    margin-bottom: 10px;
+}
+
+.warning-text {
+    font-size: 16px;
+    color: #555;
+    margin: 0;
+}
+
+.delete-entry-details {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.detail-row:last-child {
+    border-bottom: none;
+}
+
+.detail-label {
+    font-weight: 600;
+    color: #666;
+}
+
+.detail-value {
+    color: #333;
+    font-weight: 500;
+}
+
+.danger-btn {
+    padding: 10px 20px;
+    background: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.danger-btn:hover {
+    background: #c0392b;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);
 }
 
 .report-week h3 {
     color: #667eea;
     margin-bottom: 15px;
+}
+
+.report-entries {
+    margin-bottom: 20px;
+}
+
+.report-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.report-table thead {
+    background: #f8f9ff;
+    border-bottom: 2px solid #667eea;
+}
+
+.report-table th {
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    color: #667eea;
+}
+
+.report-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.report-table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+.report-table tbody tr:last-child td {
+    border-bottom: none;
 }
 
 .report-task {

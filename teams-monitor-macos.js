@@ -1,5 +1,4 @@
 const { exec } = require('child_process');
-const { ipcMain } = require('electron');
 const util = require('util');
 const execPromise = util.promisify(exec);
 

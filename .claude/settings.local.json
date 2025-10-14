@@ -2,7 +2,16 @@
   "permissions": {
     "allow": [
       "Bash(timeout:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(npm start)",
+      "Bash(npm uninstall:*)",
+      "Bash(test:*)",
+      "Bash(npx electron:*)",
+      "Bash(npm install:*)",
+      "Bash(./node_modules/electron/dist/electron.exe:*)",
+      "Bash(where electron)",
+      "Bash(cat:*)",
+      "Bash(pkill:*)"
     ],
     "deny": [],
     "ask": []
