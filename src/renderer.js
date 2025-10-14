@@ -8,6 +8,11 @@ let startTime = null;
 let elapsedSeconds = 0;
 let isPaused = false;
 let pausedTime = 0;
+let preCallTask = null; // Store task before Teams call
+let preCallStartTime = null;
+let preCallElapsedSeconds = 0;
+let currentTeamsCallRecord = null; // Store Teams call info for linking
+let pendingTeamsCallEntryId = null; // Store the entry ID to update after linking
 
 // DOM Elements
 const timerDisplay = document.getElementById('timerDisplay');
@@ -124,6 +129,7 @@ function setupEventListeners() {
     window.addEventListener('click', (e) => {
         const editModal = document.getElementById('editEntryModal');
         const deleteModal = document.getElementById('deleteConfirmModal');
+        const bulkDeleteModal = document.getElementById('bulkDeleteModal');
 
         if (e.target === editModal) {
             closeEditModal();
@@ -131,12 +137,47 @@ function setupEventListeners() {
         if (e.target === deleteModal) {
             closeDeleteModal();
         }
+        if (e.target === bulkDeleteModal) {
+            closeBulkDeleteModal();
+        }
     });
 
     // Allow Enter key to save in edit modal
     document.getElementById('editMinutes').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') saveEditedEntry();
     });
+
+    // Collapsible "This Week" section
+    const weekHeader = document.getElementById('weekHeader');
+    const weekSummary = document.getElementById('weekSummary');
+    if (weekHeader && weekSummary) {
+        weekHeader.addEventListener('click', () => {
+            weekHeader.classList.toggle('collapsed');
+            weekSummary.classList.toggle('collapsed');
+        });
+    }
+
+    // Collapsible "Today's Summary" section
+    const todayHeader = document.getElementById('todayHeader');
+    const todaySummary = document.getElementById('todaySummary');
+    if (todayHeader && todaySummary) {
+        todayHeader.addEventListener('click', () => {
+            todayHeader.classList.toggle('collapsed');
+            todaySummary.classList.toggle('collapsed');
+        });
+    }
+
+    // Teams Call End Modal handlers
+    document.querySelector('.close-teams-end')?.addEventListener('click', closeTeamsCallEndModal);
+    document.getElementById('skipJiraLinkBtn')?.addEventListener('click', skipJiraLink);
+    document.getElementById('confirmJiraLinkBtn')?.addEventListener('click', confirmJiraLink);
+    document.getElementById('teamsProjectSelect')?.addEventListener('change', handleTeamsProjectChange);
+    document.getElementById('teamsTicketSelect')?.addEventListener('change', handleTeamsTicketChange);
+
+    // Bulk Delete Modal handlers
+    document.querySelector('.close-bulk-delete')?.addEventListener('click', closeBulkDeleteModal);
+    document.getElementById('cancelBulkDeleteBtn')?.addEventListener('click', closeBulkDeleteModal);
+    document.getElementById('confirmBulkDeleteBtn')?.addEventListener('click', confirmBulkDelete);
 }
 
 function startTask(taskName) {
@@ -324,6 +365,7 @@ async function updateTodaySummary() {
         });
         html += `
             <div class="summary-entry" data-entry-id="${entry.id}">
+                <input type="checkbox" class="entry-checkbox" data-entry-id="${entry.id}">
                 <div class="entry-details">
                     <span class="entry-time">${time}</span>
                     <span class="entry-task">${entry.task}</span>
@@ -338,6 +380,10 @@ async function updateTodaySummary() {
     });
 
     html += '</div>';
+
+    // Add bulk delete button
+    html += '<div id="todayBulkActions" class="bulk-actions" style="display: none;"><button id="todayBulkDeleteBtn" class="danger-btn">🗑️ Delete Selected (<span id="todaySelectedCount">0</span>)</button></div>';
+
     html += `
         <div class="summary-total">
             <span>Total Today</span>
@@ -346,6 +392,17 @@ async function updateTodaySummary() {
     `;
 
     summaryBox.innerHTML = html;
+
+    // Add event listeners for checkboxes
+    document.querySelectorAll('#todaySummary .entry-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', () => updateBulkActions('today'));
+    });
+
+    // Add bulk delete button handler
+    const bulkDeleteBtn = document.getElementById('todayBulkDeleteBtn');
+    if (bulkDeleteBtn) {
+        bulkDeleteBtn.addEventListener('click', () => bulkDeleteEntries('today'));
+    }
 }
 
 async function updateWeekSummary() {
@@ -394,6 +451,7 @@ async function updateWeekSummary() {
         });
         html += `
             <div class="summary-entry" data-entry-id="${entry.id}">
+                <input type="checkbox" class="entry-checkbox" data-entry-id="${entry.id}">
                 <div class="entry-details">
                     <span class="entry-time">${date}</span>
                     <span class="entry-task">${entry.task}</span>
@@ -408,6 +466,10 @@ async function updateWeekSummary() {
     });
 
     html += '</div>';
+
+    // Add bulk delete button
+    html += '<div id="weekBulkActions" class="bulk-actions" style="display: none;"><button id="weekBulkDeleteBtn" class="danger-btn">🗑️ Delete Selected (<span id="weekSelectedCount">0</span>)</button></div>';
+
     html += `
         <div class="summary-total">
             <span>Total This Week</span>
@@ -416,6 +478,17 @@ async function updateWeekSummary() {
     `;
 
     summaryBox.innerHTML = html;
+
+    // Add event listeners for checkboxes
+    document.querySelectorAll('#weekSummary .entry-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', () => updateBulkActions('week'));
+    });
+
+    // Add bulk delete button handler
+    const bulkDeleteBtn = document.getElementById('weekBulkDeleteBtn');
+    if (bulkDeleteBtn) {
+        bulkDeleteBtn.addEventListener('click', () => bulkDeleteEntries('week'));
+    }
 }
 
 function formatDuration(seconds) {
@@ -1093,6 +1166,77 @@ window.editTimeEntry = editTimeEntry;
 window.deleteTimeEntry = deleteTimeEntry;
 
 // ==========================================
+// BULK DELETE FUNCTIONALITY
+// ==========================================
+
+function updateBulkActions(section) {
+    const container = section === 'today' ? '#todaySummary' : '#weekSummary';
+    const checkboxes = document.querySelectorAll(`${container} .entry-checkbox`);
+    const checkedBoxes = Array.from(checkboxes).filter(cb => cb.checked);
+
+    const bulkActionsId = section === 'today' ? 'todayBulkActions' : 'weekBulkActions';
+    const countId = section === 'today' ? 'todaySelectedCount' : 'weekSelectedCount';
+
+    const bulkActions = document.getElementById(bulkActionsId);
+    const countSpan = document.getElementById(countId);
+
+    if (bulkActions && countSpan) {
+        if (checkedBoxes.length > 0) {
+            bulkActions.style.display = 'block';
+            countSpan.textContent = checkedBoxes.length;
+        } else {
+            bulkActions.style.display = 'none';
+        }
+    }
+}
+
+let pendingBulkDeleteIds = [];
+
+async function bulkDeleteEntries(section) {
+    const container = section === 'today' ? '#todaySummary' : '#weekSummary';
+    const checkboxes = document.querySelectorAll(`${container} .entry-checkbox:checked`);
+    const entryIds = Array.from(checkboxes).map(cb => parseInt(cb.dataset.entryId));
+
+    if (entryIds.length === 0) return;
+
+    // Store the IDs for deletion
+    pendingBulkDeleteIds = entryIds;
+
+    // Show styled confirmation modal
+    const count = entryIds.length;
+    document.getElementById('bulkDeleteCount').textContent = count;
+    document.getElementById('bulkDeleteEntryText').textContent = count === 1 ? 'entry' : 'entries';
+    document.getElementById('bulkDeleteModal').style.display = 'block';
+}
+
+async function confirmBulkDelete() {
+    if (pendingBulkDeleteIds.length === 0) {
+        closeBulkDeleteModal();
+        return;
+    }
+
+    // Delete all selected entries
+    const entries = await ipcRenderer.invoke('store-get', 'timeEntries') || [];
+    const filteredEntries = entries.filter(e => !pendingBulkDeleteIds.includes(e.id));
+    await ipcRenderer.invoke('store-set', 'timeEntries', filteredEntries);
+
+    // Clear pending IDs
+    pendingBulkDeleteIds = [];
+
+    // Close modal
+    closeBulkDeleteModal();
+
+    // Refresh both displays
+    await updateTodaySummary();
+    await updateWeekSummary();
+}
+
+function closeBulkDeleteModal() {
+    document.getElementById('bulkDeleteModal').style.display = 'none';
+    pendingBulkDeleteIds = [];
+}
+
+// ==========================================
 // TEAMS INTEGRATION
 // ==========================================
 
@@ -1117,6 +1261,34 @@ function handleTeamsCallStarted(callInfo) {
     // Update Teams status indicator
     updateTeamsStatus('in-call', callInfo.title);
 
+    // Save current task if one is running (DON'T stop it, just pause state)
+    if (currentTask && !currentTask.includes('Teams:')) {
+        preCallTask = currentTask;
+        preCallStartTime = startTime;
+        preCallElapsedSeconds = elapsedSeconds;
+        console.log('Saved pre-call task:', preCallTask);
+
+        // Clear timer and task display (but DON'T save entry yet)
+        clearInterval(timerInterval);
+        timerInterval = null;
+        currentTask = null;
+        startTime = null;
+        elapsedSeconds = 0;
+        isPaused = false;
+        pausedTime = 0;
+
+        currentTaskDisplay.textContent = 'No task selected';
+        timerStatus.textContent = 'Stopped';
+        timerDisplay.textContent = '00:00:00';
+
+        pauseBtn.disabled = true;
+        stopBtn.disabled = true;
+
+        document.querySelectorAll('.task-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+    }
+
     // Check if user wants automatic tracking
     const shouldAutoTrack = localStorage.getItem('teamsAutoTrack') !== 'false';
 
@@ -1125,25 +1297,86 @@ function handleTeamsCallStarted(callInfo) {
         return;
     }
 
-    // Auto-start tracking the call
+    // Auto-start tracking the call (manually, NOT using startTask to avoid duplicate entries)
     const taskName = formatTeamsTaskName(callInfo);
-    startTask(taskName);
+
+    currentTask = taskName;
+    startTime = Date.now();
+    elapsedSeconds = 0;
+    isPaused = false;
+    pausedTime = 0;
+
+    currentTaskDisplay.textContent = taskName;
+    timerStatus.textContent = 'Running';
+
+    pauseBtn.disabled = false;
+    stopBtn.disabled = false;
+
+    if (!timerInterval) {
+        timerInterval = setInterval(updateTimer, 1000);
+    }
 
     showTeamsCallNotification(callInfo, true);
 }
 
-function handleTeamsCallEnded(callRecord) {
+async function handleTeamsCallEnded(callRecord) {
     console.log('Teams call ended:', callRecord);
 
     // Update Teams status indicator
     updateTeamsStatus('active', 'Monitoring for calls...');
 
-    // If we were tracking this call, stop it
+    // Store the call record for later linking
+    currentTeamsCallRecord = callRecord;
+
+    // If we were tracking this call, stop it and get the entry ID
     if (currentTask && currentTask.includes('Teams:')) {
-        stopTask();
+        console.log('Stopping Teams call task:', currentTask);
+
+        // Manually save the entry and get its ID before stopping
+        const duration = elapsedSeconds;
+        const taskToSave = currentTask;
+
+        // Create and save the entry
+        const entries = await ipcRenderer.invoke('store-get', 'timeEntries') || [];
+        const newEntry = {
+            id: Date.now(),
+            task: taskToSave,
+            date: new Date().toISOString(),
+            duration: duration,
+            timestamp: Date.now()
+        };
+
+        entries.push(newEntry);
+        await ipcRenderer.invoke('store-set', 'timeEntries', entries);
+
+        // Store the entry ID for later linking
+        pendingTeamsCallEntryId = newEntry.id;
+        console.log('Created entry with ID:', pendingTeamsCallEntryId);
+
+        // Now clear the timer state (without calling stopTask which would create duplicate entry)
+        clearInterval(timerInterval);
+        timerInterval = null;
+        currentTask = null;
+        startTime = null;
+        elapsedSeconds = 0;
+        isPaused = false;
+        pausedTime = 0;
+
+        currentTaskDisplay.textContent = 'No task selected';
+        timerStatus.textContent = 'Stopped';
+        timerDisplay.textContent = '00:00:00';
+
+        pauseBtn.disabled = true;
+        stopBtn.disabled = true;
+        pauseBtn.textContent = '⏸️ Pause';
+
+        document.querySelectorAll('.task-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
     }
 
-    showTeamsCallEndNotification(callRecord);
+    // Show modal to link to Jira ticket
+    await showTeamsCallEndModal(callRecord);
 }
 
 function handleTeamsCallUpdated(callInfo) {
@@ -1197,7 +1430,7 @@ function showTeamsCallNotification(callInfo, autoTracked) {
     }, 5000);
 }
 
-function showTeamsCallEndNotification(callRecord) {
+function showTeamsCallEndNotification(callRecord, taskResumed) {
     const duration = formatDuration(callRecord.duration);
 
     const notification = document.createElement('div');
@@ -1206,6 +1439,7 @@ function showTeamsCallEndNotification(callRecord) {
         <div class="notification-content">
             <strong>📞 Teams Call Ended</strong>
             <p>Duration: ${duration}</p>
+            ${taskResumed ? '<p style="opacity: 0.9;">✓ Resumed previous task</p>' : ''}
         </div>
     `;
 
@@ -1239,4 +1473,213 @@ function updateTeamsStatus(status, message) {
     }
 
     statusText.textContent = message;
+}
+
+// ==========================================
+// TEAMS CALL JIRA LINKING
+// ==========================================
+
+async function showTeamsCallEndModal(callRecord) {
+    const modal = document.getElementById('teamsCallEndModal');
+    const callInfo = document.getElementById('teamsCallEndInfo');
+    const duration = formatDuration(callRecord.duration);
+
+    // Show call information
+    callInfo.innerHTML = `
+        <strong>${callRecord.title}</strong>
+        <div style="margin-top: 5px; font-size: 13px;">Duration: ${duration}</div>
+    `;
+
+    // Populate project dropdown
+    await populateTeamsProjectDropdown();
+
+    // Show the modal
+    modal.style.display = 'block';
+}
+
+async function populateTeamsProjectDropdown() {
+    const projectSelect = document.getElementById('teamsProjectSelect');
+    const ticketSelect = document.getElementById('teamsTicketSelect');
+
+    // Reset dropdowns
+    projectSelect.innerHTML = '<option value="">Select a project...</option>';
+    ticketSelect.innerHTML = '<option value="">Select a project first...</option>';
+    ticketSelect.disabled = true;
+    document.getElementById('confirmJiraLinkBtn').disabled = true;
+
+    // Get unique projects from all Jira tickets
+    if (!allJiraTickets || allJiraTickets.length === 0) {
+        projectSelect.innerHTML = '<option value="">No Jira tickets loaded</option>';
+        projectSelect.disabled = true;
+        return;
+    }
+
+    projectSelect.disabled = false;
+
+    // Group by project
+    const projects = {};
+    allJiraTickets.forEach(issue => {
+        const key = issue.fields.project.key;
+        const name = issue.fields.project.name;
+        if (!projects[key]) {
+            projects[key] = name;
+        }
+    });
+
+    // Sort projects by key
+    const sortedProjects = Object.keys(projects).sort();
+
+    sortedProjects.forEach(key => {
+        const option = document.createElement('option');
+        option.value = key;
+        option.textContent = `${key} - ${projects[key]}`;
+        projectSelect.appendChild(option);
+    });
+}
+
+function handleTeamsProjectChange() {
+    const projectSelect = document.getElementById('teamsProjectSelect');
+    const ticketSelect = document.getElementById('teamsTicketSelect');
+    const confirmBtn = document.getElementById('confirmJiraLinkBtn');
+
+    const selectedProject = projectSelect.value;
+
+    if (!selectedProject) {
+        ticketSelect.innerHTML = '<option value="">Select a project first...</option>';
+        ticketSelect.disabled = true;
+        confirmBtn.disabled = true;
+        return;
+    }
+
+    // Filter tickets by selected project
+    const projectTickets = allJiraTickets.filter(
+        issue => issue.fields.project.key === selectedProject
+    );
+
+    ticketSelect.innerHTML = '<option value="">Select a ticket...</option>';
+    ticketSelect.disabled = false;
+    confirmBtn.disabled = true;
+
+    projectTickets.forEach(issue => {
+        const option = document.createElement('option');
+        option.value = issue.key;
+        option.textContent = `${issue.key}: ${issue.fields.summary}`;
+        option.dataset.summary = issue.fields.summary;
+        ticketSelect.appendChild(option);
+    });
+}
+
+function handleTeamsTicketChange() {
+    const ticketSelect = document.getElementById('teamsTicketSelect');
+    const confirmBtn = document.getElementById('confirmJiraLinkBtn');
+
+    confirmBtn.disabled = !ticketSelect.value;
+}
+
+async function confirmJiraLink() {
+    const ticketSelect = document.getElementById('teamsTicketSelect');
+    const selectedTicket = ticketSelect.value;
+
+    console.log('confirmJiraLink called');
+    console.log('selectedTicket:', selectedTicket);
+    console.log('pendingTeamsCallEntryId:', pendingTeamsCallEntryId);
+    console.log('currentTeamsCallRecord:', currentTeamsCallRecord);
+
+    if (!selectedTicket || !pendingTeamsCallEntryId || !currentTeamsCallRecord) {
+        console.log('Missing data, closing modal');
+        closeTeamsCallEndModal();
+        await resumePreCallTask(false);
+        return;
+    }
+
+    // Get the ticket summary
+    const selectedOption = ticketSelect.options[ticketSelect.selectedIndex];
+    const ticketSummary = selectedOption.dataset.summary;
+
+    console.log('Updating entry', pendingTeamsCallEntryId, 'to link to', selectedTicket);
+
+    // Update the time entry with the Jira ticket + meeting title
+    const entries = await ipcRenderer.invoke('store-get', 'timeEntries') || [];
+    console.log('Total entries:', entries.length);
+
+    const entry = entries.find(e => e.id === pendingTeamsCallEntryId);
+
+    if (entry) {
+        console.log('Found entry, current task:', entry.task);
+        // Format: JIRA-123: Ticket Summary - Meeting Title
+        const newTask = `${selectedTicket}: ${ticketSummary} - ${currentTeamsCallRecord.title}`;
+        entry.task = newTask;
+        console.log('New task will be:', newTask);
+
+        await ipcRenderer.invoke('store-set', 'timeEntries', entries);
+        console.log('Entry saved');
+
+        // Immediately refresh the displays to show the updated entry
+        console.log('Refreshing displays...');
+        await updateTodaySummary();
+        await updateWeekSummary();
+        console.log('Displays refreshed');
+    } else {
+        console.error('Entry not found with ID:', pendingTeamsCallEntryId);
+    }
+
+    closeTeamsCallEndModal();
+    await resumePreCallTask(true);
+}
+
+async function skipJiraLink() {
+    closeTeamsCallEndModal();
+    resumePreCallTask(false);
+}
+
+function closeTeamsCallEndModal() {
+    document.getElementById('teamsCallEndModal').style.display = 'none';
+    pendingTeamsCallEntryId = null;
+    currentTeamsCallRecord = null;
+}
+
+async function resumePreCallTask(taskResumed) {
+    // Resume pre-call task if one was saved
+    if (preCallTask) {
+        console.log('Resuming pre-call task:', preCallTask);
+
+        // Restore the previous task state
+        currentTask = preCallTask;
+        startTime = Date.now() - (preCallElapsedSeconds * 1000);
+        elapsedSeconds = preCallElapsedSeconds;
+        isPaused = false;
+        pausedTime = 0;
+
+        currentTaskDisplay.textContent = preCallTask;
+        timerStatus.textContent = 'Running';
+
+        pauseBtn.disabled = false;
+        stopBtn.disabled = false;
+
+        // Highlight the resumed task
+        document.querySelectorAll('.task-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.dataset.task === preCallTask || btn.textContent.includes(preCallTask)) {
+                btn.classList.add('active');
+            }
+        });
+
+        if (!timerInterval) {
+            timerInterval = setInterval(updateTimer, 1000);
+        }
+
+        // Clear the saved task
+        preCallTask = null;
+        preCallStartTime = null;
+        preCallElapsedSeconds = 0;
+    }
+
+    // Refresh displays - AWAIT these async functions
+    await updateTodaySummary();
+    await updateWeekSummary();
+
+    // Show notification
+    if (currentTeamsCallRecord) {
+        showTeamsCallEndNotification(currentTeamsCallRecord, taskResumed && preCallTask !== null);
+    }
 }

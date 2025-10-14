@@ -4,9 +4,12 @@
   "description": "Desktop time tracking widget with Jira integration",
   "main": "main.js",
   "scripts": {
-    "start": "electron .",
-    "dev": "electron . --dev",
-    "build-win": "electron-builder --win"
+    "start": "npm run kill && electron .",
+    "dev": "npm run kill && electron . --dev",
+    "kill": "taskkill //F //IM electron.exe || echo No Electron processes to kill",
+    "build-win": "electron-builder --win",
+    "build-mac": "electron-builder --mac",
+    "build-all": "electron-builder --win --mac"
   },
   "keywords": [
     "time-tracker",
@@ -17,7 +20,8 @@
   "license": "MIT",
   "devDependencies": {
     "electron": "^28.0.0",
-    "electron-builder": "^24.9.1"
+    "electron-builder": "^24.9.1",
+    "electron-packager": "^17.1.2"
   },
   "dependencies": {
     "@azure/msal-node": "^3.8.0",
@@ -30,9 +34,20 @@
   "build": {
     "appId": "com.yourcompany.timetracker",
     "productName": "Time Tracker",
+    "directories": {
+      "output": "D:/My_Projects_Repos/time-tracker-builds"
+    },
     "win": {
-      "target": "nsis",
-      "icon": "assets/icon.ico"
-    }
+      "target": "portable",
+      "icon": "assets/icon.ico",
+      "sign": null,
+      "verifyUpdateCodeSignature": false
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.icns",
+      "category": "public.app-category.productivity"
+    },
+    "forceCodeSigning": false
   }
 }

@@ -13,31 +13,26 @@
             <button id="settingsBtn" class="icon-btn" title="Settings">⚙️</button>
         </div>
 
-        <div class="timer-display">
-            <div id="currentTask">No task selected</div>
-            <div id="timerDisplay">00:00:00</div>
-            <div id="timerStatus">Stopped</div>
-        </div>
-
-        <div class="control-buttons">
-            <button id="pauseBtn" class="control-btn" disabled>⏸️ Pause</button>
-            <button id="lunchBtn" class="control-btn lunch-btn">🍔 Lunch Break</button>
-            <button id="stopBtn" class="control-btn stop-btn" disabled>⏹️ Stop</button>
-        </div>
-
-        <div class="section">
-            <h3>Quick Tasks</h3>
-            <div class="task-grid" id="quickTasks">
-                <button class="task-btn" data-task="General Projects">📁 General Projects</button>
-                <button class="task-btn" data-task="General Meetings">👥 General Meetings</button>
-                <button class="task-btn" data-task="Department Meeting">🏢 Department Meeting</button>
+        <div class="timer-controls-container">
+            <div class="timer-display">
+                <div id="currentTask">No task selected</div>
+                <div id="timerDisplay">00:00:00</div>
+                <div id="timerStatus">Stopped</div>
             </div>
-        </div>
 
-        <div class="section">
-            <h3>Recent</h3>
-            <div id="recentTasks" class="task-grid recent-tasks">
-                <div class="empty-message">No recent tasks</div>
+            <div class="control-buttons">
+                <button id="pauseBtn" class="control-btn" disabled>⏸️ Pause</button>
+                <button id="lunchBtn" class="control-btn lunch-btn">🍔 Lunch Break</button>
+                <button id="stopBtn" class="control-btn stop-btn" disabled>⏹️ Stop</button>
+            </div>
+
+            <div class="quick-tasks-inline">
+                <h3>Quick Tasks</h3>
+                <div class="task-grid" id="quickTasks">
+                    <button class="task-btn" data-task="General Projects">📁 General Projects</button>
+                    <button class="task-btn" data-task="General Meetings">👥 General Meetings</button>
+                    <button class="task-btn" data-task="Department Meeting">🏢 Department Meeting</button>
+                </div>
             </div>
         </div>
 
@@ -46,6 +41,13 @@
             <div id="teamsStatus" class="teams-status">
                 <div class="teams-status-indicator" id="teamsIndicator"></div>
                 <span id="teamsStatusText">Monitoring for calls...</span>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>Recent</h3>
+            <div id="recentTasks" class="task-grid recent-tasks">
+                <div class="empty-message">No recent tasks</div>
             </div>
         </div>
 
@@ -74,15 +76,21 @@
         </div>
 
         <div class="section">
-            <h3>This Week <span id="weekRange" class="week-range"></span></h3>
-            <div id="weekSummary" class="summary-box">
+            <h3 class="collapsible-header collapsed" id="weekHeader">
+                <span class="collapse-icon">▼</span>
+                This Week <span id="weekRange" class="week-range"></span>
+            </h3>
+            <div id="weekSummary" class="summary-box collapsible-content collapsed">
                 <p>No time tracked this week</p>
             </div>
         </div>
 
         <div class="section">
-            <h3>Today's Summary</h3>
-            <div id="todaySummary" class="summary-box">
+            <h3 class="collapsible-header" id="todayHeader">
+                <span class="collapse-icon">▼</span>
+                Today's Summary
+            </h3>
+            <div id="todaySummary" class="summary-box collapsible-content">
                 <p>No time tracked today</p>
             </div>
         </div>
@@ -163,6 +171,61 @@
             <div class="modal-footer">
                 <button id="cancelDeleteBtn" class="secondary-btn">Cancel</button>
                 <button id="confirmDeleteBtn" class="danger-btn">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Teams Call End - Link to Jira Modal -->
+    <div id="teamsCallEndModal" class="modal">
+        <div class="modal-content modal-medium">
+            <div class="modal-header">
+                <h2>📞 Link Teams Call to Jira</h2>
+                <span class="close-teams-end">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="teamsCallEndInfo" class="teams-call-info"></div>
+                <p style="margin: 15px 0 10px 0; color: #666; font-size: 14px;">Link this call to a Jira ticket:</p>
+
+                <div class="form-group">
+                    <label for="teamsProjectSelect">Project:</label>
+                    <select id="teamsProjectSelect" class="form-select">
+                        <option value="">Select a project...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="teamsTicketSelect">Ticket:</label>
+                    <select id="teamsTicketSelect" class="form-select" disabled>
+                        <option value="">Select a project first...</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="skipJiraLinkBtn" class="secondary-btn">Skip - Keep Generic</button>
+                <button id="confirmJiraLinkBtn" class="primary-btn" disabled>Link to Ticket</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Delete Confirmation Modal -->
+    <div id="bulkDeleteModal" class="modal">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2>Delete Multiple Entries?</h2>
+                <span class="close-bulk-delete">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="delete-warning">
+                    <div class="warning-icon">⚠️</div>
+                    <p class="warning-text">Are you sure you want to delete <strong id="bulkDeleteCount">0</strong> <span id="bulkDeleteEntryText">entries</span>?</p>
+                </div>
+                <div class="bulk-delete-info">
+                    <p style="color: #666; font-size: 13px; margin-top: 15px;">This action cannot be undone.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="cancelBulkDeleteBtn" class="secondary-btn">Cancel</button>
+                <button id="confirmBulkDeleteBtn" class="danger-btn">Delete All</button>
             </div>
         </div>
     </div>

@@ -11,7 +11,9 @@
       "Bash(./node_modules/electron/dist/electron.exe:*)",
       "Bash(where electron)",
       "Bash(cat:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(npm run build-win:*)",
+      "Bash(set CSC_IDENTITY_AUTO_DISCOVERY=false)"
     ],
     "deny": [],
     "ask": []

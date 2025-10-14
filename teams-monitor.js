@@ -47,23 +47,9 @@ class TeamsCallMonitor {
 
       // If not a Teams window
       if (!isTeamsWindow) {
-        // If we were in a call and Teams is no longer active for more than one check,
-        // assume the call ended
-        if (this.isInCall) {
-          // Mark that we haven't seen Teams, increment counter
-          if (!this.teamsNotSeenCount) {
-            this.teamsNotSeenCount = 1;
-          } else {
-            this.teamsNotSeenCount++;
-          }
-
-          // If Teams hasn't been active for 3 consecutive checks (9 seconds), end the call
-          if (this.teamsNotSeenCount >= 3) {
-            console.log('Teams window not active for 9+ seconds, ending call');
-            this.handleCallEnd();
-            this.teamsNotSeenCount = 0;
-          }
-        }
+        // If we were in a call and Teams is no longer active,
+        // we DON'T automatically end the call - user might be screensharing or multitasking
+        // The call will only end when they explicitly leave it and Teams window shows non-call state
         return;
       }
 
