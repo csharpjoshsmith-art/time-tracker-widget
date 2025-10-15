@@ -40,7 +40,8 @@
       "Bash(git commit:*)",
       "Bash(git checkout:*)",
       "Bash(./node_modules/.bin/electron.cmd:*)",
-      "Bash(npm run rebuild:*)"
+      "Bash(npm run rebuild:*)",
+      "Read(//d/My_Projects_Repos/time-tracker-builds/**)"
     ],
     "deny": [],
     "ask": []
