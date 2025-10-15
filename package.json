@@ -4,9 +4,9 @@
   "description": "Desktop time tracking widget with Jira integration",
   "main": "main.js",
   "scripts": {
-    "start": "npm run kill && electron .",
-    "dev": "npm run kill && electron . --dev",
-    "kill": "taskkill //F //IM electron.exe || echo No Electron processes to kill",
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "kill": "taskkill /F /IM electron.exe || echo No Electron processes to kill",
     "rebuild": "electron-rebuild -f -w better-sqlite3",
     "postinstall": "npm run rebuild",
     "build-win": "set CSC_IDENTITY_AUTO_DISCOVERY=false && electron-builder --win",
@@ -22,6 +22,7 @@
   "license": "MIT",
   "devDependencies": {
     "better-sqlite3": "^12.4.1",
+    "electron": "^38.2.2",
     "electron-builder": "^24.9.1",
     "electron-packager": "^17.1.2",
     "electron-rebuild": "^3.2.9"
@@ -31,7 +32,6 @@
     "@microsoft/microsoft-graph-client": "^3.0.7",
     "active-win": "^8.2.1",
     "axios": "^1.6.0",
-    "electron": "^31.0.0",
     "electron-store": "^8.2.0",
     "node-fetch": "^2.7.0"
   },
@@ -52,7 +52,9 @@
       {
         "from": "node_modules/better-sqlite3/build/Release",
         "to": "better-sqlite3",
-        "filter": ["*.node"]
+        "filter": [
+          "*.node"
+        ]
       }
     ],
     "win": {

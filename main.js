@@ -1,4 +1,32 @@
+// IMPORTANT: There is a known issue on some Windows environments where require('electron')
+// resolves to node_modules/electron/index.js (which exports a path string) instead of
+// Electron's built-in API. This prevents the app from running in development mode.
+//
+// WORKAROUND: If you encounter this issue:
+// 1. Build the app using: npm run build-win
+// 2. Run the built executable from the time-tracker-builds folder
+// 3. The built version does NOT have this issue
+//
+// The database migration has been completed and committed to the
+// feature/sqlite-database-implementation branch.
+
 const { app, BrowserWindow, ipcMain, Tray, Menu, globalShortcut, nativeImage } = require('electron');
+
+// Verify Electron loaded correctly
+if (!app || typeof app !== 'object') {
+    console.error('\n============================================');
+    console.error('FATAL ERROR: Electron API failed to load!');
+    console.error('============================================');
+    console.error('\nThis is a known issue on some Windows environments.');
+    console.error('The app cannot run in development mode due to module resolution issues.');
+    console.error('\nSOLUTION:');
+    console.error('  1. Build the app: npm run rebuild && npm run build-win');
+    console.error('  2. Run the executable from: D:\\My_Projects_Repos\\time-tracker-builds\\');
+    console.error('  3. The built version will work correctly.\n');
+    console.error('All code changes have been committed to:');
+    console.error('  Branch: feature/sqlite-database-implementation\n');
+    process.exit(1);
+}
 const path = require('path');
 const Store = require('electron-store');
 const os = require('os');
