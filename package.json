@@ -8,7 +8,7 @@
     "dev": "electron . --dev",
     "kill": "taskkill /F /IM electron.exe || echo No Electron processes to kill",
     "rebuild": "electron-rebuild -f -w better-sqlite3",
-    "postinstall": "npm run rebuild",
+    "postinstall": "electron-builder install-app-deps",
     "build-win": "set CSC_IDENTITY_AUTO_DISCOVERY=false && electron-builder --win",
     "build-mac": "electron-builder --mac",
     "build-all": "electron-builder --win --mac"
@@ -21,7 +21,6 @@
   "author": "Your Name",
   "license": "MIT",
   "devDependencies": {
-    "better-sqlite3": "^12.4.1",
     "electron": "^38.2.2",
     "electron-builder": "^24.9.1",
     "electron-packager": "^17.1.2",
@@ -32,6 +31,7 @@
     "@microsoft/microsoft-graph-client": "^3.0.7",
     "active-win": "^8.2.1",
     "axios": "^1.6.0",
+    "better-sqlite3": "^12.4.1",
     "electron-store": "^8.2.0",
     "node-fetch": "^2.7.0"
   },
@@ -42,20 +42,11 @@
       "output": "D:/My_Projects_Repos/time-tracker-builds"
     },
     "asarUnpack": [
-      "node_modules/better-sqlite3/**/*"
+      "node_modules/better-sqlite3/**/*",
+      "node_modules/active-win/**/*"
     ],
     "files": [
-      "**/*",
-      "!node_modules/better-sqlite3/build/Release/better_sqlite3.node"
-    ],
-    "extraResources": [
-      {
-        "from": "node_modules/better-sqlite3/build/Release",
-        "to": "better-sqlite3",
-        "filter": [
-          "*.node"
-        ]
-      }
+      "**/*"
     ],
     "win": {
       "target": "portable",
