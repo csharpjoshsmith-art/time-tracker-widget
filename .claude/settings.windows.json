@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(timeout:*)",
+      "Bash(node:*)",
+      "Bash(npm start)",
+      "Bash(npm uninstall:*)",
+      "Bash(test:*)",
+      "Bash(npx electron:*)",
+      "Bash(npm install:*)",
+      "Bash(./node_modules/electron/dist/electron.exe:*)",
+      "Bash(where electron)",
+      "Bash(cat:*)",
+      "Bash(pkill:*)",
+      "Bash(npm run build-win:*)",
+      "Bash(set CSC_IDENTITY_AUTO_DISCOVERY=false)",
+      "Bash(git remote set-url:*)",
+      "Bash(git branch:*)",
+      "Bash(git fetch:*)",
+      "Bash(git push:*)",
+      "Bash(git pull:*)",
+      "Bash(git add:*)",
+      "Bash(git rebase:*)",
+      "Bash(git stash:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
