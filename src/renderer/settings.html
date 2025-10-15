@@ -290,9 +290,6 @@
     </div>
 
     <script>
-        const { ipcRenderer } = require('electron');
-        const axios = require('axios');
-
         console.log('Settings page loaded');
 
         // Load existing settings
@@ -301,8 +298,8 @@
         async function loadSettings() {
             try {
                 console.log('Loading settings...');
-                const jiraSettings = await ipcRenderer.invoke('store-get', 'jiraSettings');
-                const teamsSettings = await ipcRenderer.invoke('store-get', 'teamsSettings');
+                const jiraSettings = await window.db.getSetting('jiraSettings');
+                const teamsSettings = await window.db.getSetting('teamsSettings');
 
                 console.log('Loaded jira settings:', jiraSettings);
                 console.log('Loaded teams settings:', teamsSettings);
@@ -344,30 +341,20 @@
             showStatus('Testing connection...', 'success');
 
             try {
-                const auth = Buffer.from(`${email}:${apiToken}`).toString('base64');
-                
-                const response = await axios({
-                    method: 'get',
-                    url: `https://${domain}/rest/api/3/myself`,
-                    headers: {
-                        'Authorization': `Basic ${auth}`,
-                        'Accept': 'application/json'
-                    },
-                    timeout: 10000
+                const result = await window.ipcRenderer.invoke('test-jira-connection', {
+                    domain,
+                    email,
+                    apiToken
                 });
 
-                showStatus(`✅ Connected successfully! Hello, ${response.data.displayName}`, 'success');
+                if (result.success) {
+                    showStatus(`✅ Connected successfully! Hello, ${result.displayName}`, 'success');
+                } else {
+                    throw new Error(result.error);
+                }
             } catch (error) {
                 console.error('Test failed:', error);
-                if (error.response) {
-                    showStatus(`❌ Connection failed: ${error.response.status} - Check your credentials`, 'error');
-                } else if (error.code === 'ENOTFOUND') {
-                    showStatus('❌ Domain not found. Check your Jira domain', 'error');
-                } else if (error.code === 'ETIMEDOUT') {
-                    showStatus('❌ Connection timeout. Check your internet connection', 'error');
-                } else {
-                    showStatus(`❌ Connection failed: ${error.message}`, 'error');
-                }
+                showStatus(`❌ Connection failed: ${error.message}`, 'error');
             } finally {
                 testBtn.disabled = false;
                 testBtn.textContent = '🔍 Test Connection';
@@ -390,7 +377,7 @@
             authBtn.textContent = '⏳ Authenticating...';
 
             try {
-                const result = await ipcRenderer.invoke('teams-authenticate', {
+                const result = await window.ipcRenderer.invoke('teams-authenticate', {
                     clientId,
                     tenantId,
                     clientSecret
@@ -406,7 +393,7 @@
                         accessToken: result.accessToken,
                         enabled: true
                     };
-                    await ipcRenderer.invoke('store-set', 'teamsSettings', teamsSettings);
+                    await window.db.setSetting('teamsSettings', teamsSettings);
                     showStatus('✅ Teams authenticated successfully!', 'success');
                 } else {
                     showStatus(`❌ Authentication failed: ${result.error}`, 'error');
@@ -435,7 +422,7 @@
                 };
 
                 try {
-                    await ipcRenderer.invoke('store-set', 'jiraSettings', jiraSettings);
+                    await window.db.setSetting('jiraSettings', jiraSettings);
                 } catch (error) {
                     console.error('Error saving Jira settings:', error);
                     showStatus('❌ Error saving Jira settings', 'error');
@@ -449,7 +436,7 @@
             const teamsTenantId = document.getElementById('teamsTenantId').value.trim();
             const teamsClientSecret = document.getElementById('teamsClientSecret').value.trim();
 
-            const existingTeamsSettings = await ipcRenderer.invoke('store-get', 'teamsSettings') || {};
+            const existingTeamsSettings = await window.db.getSetting('teamsSettings') || {};
 
             const teamsSettings = {
                 ...existingTeamsSettings,
@@ -461,7 +448,7 @@
             };
 
             try {
-                await ipcRenderer.invoke('store-set', 'teamsSettings', teamsSettings);
+                await window.db.setSetting('teamsSettings', teamsSettings);
                 // Also update localStorage for renderer process
                 localStorage.setItem('teamsAutoTrack', teamsAutoTrack);
                 showStatus('✅ Settings saved successfully!', 'success');

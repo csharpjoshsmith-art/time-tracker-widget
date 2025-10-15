@@ -229,8 +229,9 @@ ipcMain.handle('open-settings', () => {
     parent: mainWindow,
     modal: true,
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'src/preload/preload.js')
     }
   });
 
@@ -300,6 +301,43 @@ ipcMain.handle('fetch-jira-reporter-tickets', async (event, settings) => {
       success: false,
       error: error.response?.data || error.message,
       status: error.response?.status
+    };
+  }
+});
+
+// Test Jira connection
+ipcMain.handle('test-jira-connection', async (event, settings) => {
+  const axios = require('axios');
+
+  try {
+    const auth = Buffer.from(`${settings.email}:${settings.apiToken}`).toString('base64');
+
+    const response = await axios({
+      method: 'get',
+      url: `https://${settings.domain}/rest/api/3/myself`,
+      headers: {
+        'Authorization': `Basic ${auth}`,
+        'Accept': 'application/json'
+      },
+      timeout: 10000
+    });
+
+    return { success: true, displayName: response.data.displayName };
+  } catch (error) {
+    console.error('Jira test connection error:', error.message);
+    let errorMessage = error.message;
+
+    if (error.response) {
+      errorMessage = `${error.response.status} - Check your credentials`;
+    } else if (error.code === 'ENOTFOUND') {
+      errorMessage = 'Domain not found. Check your Jira domain';
+    } else if (error.code === 'ETIMEDOUT') {
+      errorMessage = 'Connection timeout. Check your internet connection';
+    }
+
+    return {
+      success: false,
+      error: errorMessage
     };
   }
 });

@@ -30,15 +30,42 @@ contextBridge.exposeInMainWorld('db', {
     getStats: () => ipcRenderer.invoke('db:getStats')
 });
 
-// Keep existing IPC communication for other features
-contextBridge.exposeInMainWorld('electron', {
-    ipcRenderer: {
-        invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args),
-        on: (channel, callback) => {
-            ipcRenderer.on(channel, (event, ...args) => callback(...args));
-        },
-        removeListener: (channel, callback) => {
-            ipcRenderer.removeListener(channel, callback);
+// Expose IPC for other features (Jira, Teams, Settings window, etc.)
+contextBridge.exposeInMainWorld('ipcRenderer', {
+    // Generic invoke
+    invoke: (channel, ...args) => {
+        // Whitelist of allowed channels
+        const validChannels = [
+            'open-settings',
+            'fetch-jira-tickets',
+            'fetch-jira-reporter-tickets',
+            'test-jira-connection',
+            'teams-authenticate',
+            'teams-get-current-meetings',
+            'teams-test-connection',
+            'teams-toggle-monitoring',
+            'teams-get-current-call',
+            'open-jira-ticket',
+            'update-timer-state'
+        ];
+        if (validChannels.includes(channel)) {
+            return ipcRenderer.invoke(channel, ...args);
         }
+        throw new Error(`Invalid channel: ${channel}`);
+    },
+    // Event listeners
+    on: (channel, callback) => {
+        const validChannels = [
+            'teams-call-started',
+            'teams-call-ended',
+            'teams-call-updated',
+            'tray-action'
+        ];
+        if (validChannels.includes(channel)) {
+            ipcRenderer.on(channel, (event, ...args) => callback(...args));
+        }
+    },
+    removeListener: (channel, callback) => {
+        ipcRenderer.removeListener(channel, callback);
     }
 });

@@ -326,8 +326,6 @@ function updateTimer() {
 }
 
 async function saveTimeEntry(task, durationSeconds) {
-    const entries = await ipcRenderer.invoke('store-get', 'timeEntries') || [];
-
     const entry = {
         id: Date.now(),
         task: task,
@@ -336,33 +334,22 @@ async function saveTimeEntry(task, durationSeconds) {
         timestamp: Date.now()
     };
 
-    entries.push(entry);
-    await ipcRenderer.invoke('store-set', 'timeEntries', entries);
+    await window.db.addTimeEntry(entry);
 
     // Update recent tasks when a task is completed
     await updateRecentTasks(task);
 }
 
 async function updateRecentTasks(taskName) {
-    let recentTasks = await ipcRenderer.invoke('store-get', 'recentTasks') || [];
-
-    // Remove task if it already exists (to move it to the front)
-    recentTasks = recentTasks.filter(t => t !== taskName);
-
-    // Add task to the beginning
-    recentTasks.unshift(taskName);
-
-    // Keep only the 5 most recent
-    recentTasks = recentTasks.slice(0, 5);
-
-    await ipcRenderer.invoke('store-set', 'recentTasks', recentTasks);
+    // Just add the task - DBManager handles the "INSERT OR REPLACE" logic
+    await window.db.addRecentTask(taskName);
 
     // Refresh the display
     loadRecentTasks();
 }
 
 async function loadRecentTasks() {
-    const recentTasks = await ipcRenderer.invoke('store-get', 'recentTasks') || [];
+    const recentTasks = await window.db.getRecentTasks();
     const container = document.getElementById('recentTasks');
 
     if (recentTasks.length === 0) {
@@ -382,7 +369,7 @@ async function loadRecentTasks() {
 }
 
 async function updateTodaySummary() {
-    const entries = await ipcRenderer.invoke('store-get', 'timeEntries') || [];
+    const entries = await window.db.getAllTimeEntries();
     const today = new Date().toDateString();
 
     const todayEntries = entries.filter(entry =>
@@ -451,7 +438,7 @@ async function updateTodaySummary() {
 }
 
 async function updateWeekSummary() {
-    const entries = await ipcRenderer.invoke('store-get', 'timeEntries') || [];
+    const entries = await window.db.getAllTimeEntries();
 
     // Get current week (Saturday to Friday)
     const now = new Date();
@@ -546,11 +533,11 @@ async function addCustomTask() {
     const taskName = customTaskInput.value.trim();
     if (!taskName) return;
 
-    const customTasks = await ipcRenderer.invoke('store-get', 'customTasks') || [];
+    const customTasks = await window.db.getAllCustomTasks();
     
     if (!customTasks.includes(taskName)) {
         customTasks.push(taskName);
-        await ipcRenderer.invoke('store-set', 'customTasks', customTasks);
+        await window.db.addCustomTask(taskName);
         loadCustomTasks();
     }
 
@@ -558,7 +545,7 @@ async function addCustomTask() {
 }
 
 async function loadCustomTasks() {
-    const customTasks = await ipcRenderer.invoke('store-get', 'customTasks') || [];
+    const customTasks = await window.db.getAllCustomTasks();
     const container = document.getElementById('customTasks');
     
     container.innerHTML = '';
@@ -580,14 +567,12 @@ async function loadCustomTasks() {
 }
 
 async function deleteCustomTask(taskName) {
-    const customTasks = await ipcRenderer.invoke('store-get', 'customTasks') || [];
-    const filtered = customTasks.filter(t => t !== taskName);
-    await ipcRenderer.invoke('store-set', 'customTasks', filtered);
+    await window.db.deleteCustomTask(taskName);
     loadCustomTasks();
 }
 
 async function checkJiraConfiguration() {
-    const settings = await ipcRenderer.invoke('store-get', 'jiraSettings');
+    const settings = await window.db.getSetting('jiraSettings');
     const statusDiv = document.getElementById('jiraStatus');
 
     if (settings && settings.domain && settings.email && settings.apiToken) {
@@ -601,7 +586,7 @@ async function checkJiraConfiguration() {
 }
 
 async function checkReporterConfiguration() {
-    const settings = await ipcRenderer.invoke('store-get', 'jiraSettings');
+    const settings = await window.db.getSetting('jiraSettings');
     const statusDiv = document.getElementById('reporterStatus');
 
     if (settings && settings.domain && settings.email && settings.apiToken) {
@@ -637,7 +622,7 @@ function getProjectColor(projectKey) {
 }
 
 async function fetchJiraTickets() {
-    const settings = await ipcRenderer.invoke('store-get', 'jiraSettings');
+    const settings = await window.db.getSetting('jiraSettings');
 
     if (!settings || !settings.domain || !settings.email || !settings.apiToken) {
         alert('Please configure Jira settings first');
@@ -807,7 +792,7 @@ function displayJiraTickets(issues) {
 }
 
 async function fetchReporterTickets() {
-    const settings = await ipcRenderer.invoke('store-get', 'jiraSettings');
+    const settings = await window.db.getSetting('jiraSettings');
 
     if (!settings || !settings.domain || !settings.email || !settings.apiToken) {
         alert('Please configure Jira settings first');
@@ -956,7 +941,7 @@ async function openSettings() {
 }
 
 async function showWeeklyReport() {
-    const entries = await ipcRenderer.invoke('store-get', 'timeEntries') || [];
+    const entries = await window.db.getAllTimeEntries();
 
     // Get current week (Saturday to Friday)
     const now = new Date();
@@ -1032,7 +1017,7 @@ async function showWeeklyReport() {
 }
 
 async function exportReport() {
-    const entries = await ipcRenderer.invoke('store-get', 'timeEntries') || [];
+    const entries = await window.db.getAllTimeEntries();
     
     // Get current week (Saturday to Friday)
     const now = new Date();
@@ -1085,7 +1070,7 @@ window.deleteCustomTask = deleteCustomTask;
 let currentEditingEntryId = null;
 
 async function editTimeEntry(entryId) {
-    const entries = await ipcRenderer.invoke('store-get', 'timeEntries') || [];
+    const entries = await window.db.getAllTimeEntries();
     const entry = entries.find(e => e.id === entryId);
 
     if (!entry) {
@@ -1121,7 +1106,7 @@ async function editTimeEntry(entryId) {
 }
 
 async function saveEditedEntry() {
-    const entries = await ipcRenderer.invoke('store-get', 'timeEntries') || [];
+    const entries = await window.db.getAllTimeEntries();
     const entry = entries.find(e => e.id === currentEditingEntryId);
 
     if (!entry) {
@@ -1153,7 +1138,7 @@ async function saveEditedEntry() {
 
     entry.date = newDate.toISOString();
     entry.duration = newDuration;
-    await ipcRenderer.invoke('store-set', 'timeEntries', entries);
+    await window.db.updateTimeEntry(currentEditingEntryId, { task: entry.task, date: entry.date, duration: entry.duration });
 
     // Close modal and refresh both summaries
     closeEditModal();
@@ -1169,7 +1154,7 @@ function closeEditModal() {
 let currentDeletingEntryId = null;
 
 async function deleteTimeEntry(entryId) {
-    const entries = await ipcRenderer.invoke('store-get', 'timeEntries') || [];
+    const entries = await window.db.getAllTimeEntries();
     const entry = entries.find(e => e.id === entryId);
 
     if (!entry) {
@@ -1189,11 +1174,11 @@ async function deleteTimeEntry(entryId) {
 }
 
 async function confirmDelete() {
-    const entries = await ipcRenderer.invoke('store-get', 'timeEntries') || [];
+    const entries = await window.db.getAllTimeEntries();
 
     // Remove the entry
     const filteredEntries = entries.filter(e => e.id !== currentDeletingEntryId);
-    await ipcRenderer.invoke('store-set', 'timeEntries', filteredEntries);
+    await window.db.deleteTimeEntry(currentDeletingEntryId);
 
     // Close modal and refresh both displays
     closeDeleteModal();
@@ -1261,9 +1246,9 @@ async function confirmBulkDelete() {
     }
 
     // Delete all selected entries
-    const entries = await ipcRenderer.invoke('store-get', 'timeEntries') || [];
+    const entries = await window.db.getAllTimeEntries();
     const filteredEntries = entries.filter(e => !pendingBulkDeleteIds.includes(e.id));
-    await ipcRenderer.invoke('store-set', 'timeEntries', filteredEntries);
+    await window.db.deleteTimeEntries(pendingBulkDeleteIds);
 
     // Clear pending IDs
     pendingBulkDeleteIds = [];
@@ -1417,7 +1402,7 @@ async function handleTeamsCallEnded(callRecord) {
         const taskToSave = currentTask;
 
         // Create and save the entry
-        const entries = await ipcRenderer.invoke('store-get', 'timeEntries') || [];
+        const entries = await window.db.getAllTimeEntries();
         const newEntry = {
             id: Date.now(),
             task: taskToSave,
@@ -1427,7 +1412,7 @@ async function handleTeamsCallEnded(callRecord) {
         };
 
         entries.push(newEntry);
-        await ipcRenderer.invoke('store-set', 'timeEntries', entries);
+        await window.db.addTimeEntry(newEntry);
 
         // Store the entry ID for later linking
         pendingTeamsCallEntryId = newEntry.id;
@@ -1679,7 +1664,7 @@ async function confirmJiraLink() {
     console.log('Updating entry', pendingTeamsCallEntryId, 'to link to', selectedTicket);
 
     // Update the time entry with the Jira ticket + meeting title
-    const entries = await ipcRenderer.invoke('store-get', 'timeEntries') || [];
+    const entries = await window.db.getAllTimeEntries();
     console.log('Total entries:', entries.length);
 
     const entry = entries.find(e => e.id === pendingTeamsCallEntryId);
@@ -1691,7 +1676,7 @@ async function confirmJiraLink() {
         entry.task = newTask;
         console.log('New task will be:', newTask);
 
-        await ipcRenderer.invoke('store-set', 'timeEntries', entries);
+        await window.db.updateTimeEntry(pendingTeamsCallEntryId, { task: entry.task, date: entry.date, duration: entry.duration });
         console.log('Entry saved');
 
         // Immediately refresh the displays to show the updated entry
