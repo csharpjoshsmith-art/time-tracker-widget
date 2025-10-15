@@ -33,3 +33,8 @@ yarn-error.log*
 
 # Package lock (optional - uncomment if you want to ignore)
 # package-lock.json
+
+# SQLite Database
+timetracker.db
+timetracker.db-shm
+timetracker.db-wal
