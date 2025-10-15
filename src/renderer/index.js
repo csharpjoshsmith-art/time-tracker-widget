@@ -1,4 +1,3 @@
-const { ipcRenderer } = require('electron');
 const axios = require('axios');
 
 // State Management
@@ -637,7 +636,7 @@ async function fetchJiraTickets() {
 
     try {
         // Call main process to fetch tickets (avoids CORS/XSRF issues)
-        const result = await ipcRenderer.invoke('fetch-jira-tickets', settings);
+        const result = await window.ipcRenderer.invoke('fetch-jira-tickets', settings);
 
         if (result.success) {
             allJiraTickets = result.data.issues;
@@ -807,7 +806,7 @@ async function fetchReporterTickets() {
 
     try {
         // Call main process to fetch reporter tickets
-        const result = await ipcRenderer.invoke('fetch-jira-reporter-tickets', settings);
+        const result = await window.ipcRenderer.invoke('fetch-jira-reporter-tickets', settings);
 
         if (result.success) {
             displayReporterTickets(result.data.issues);
@@ -921,7 +920,7 @@ async function openJiraTicket(ticketKey) {
     const ticketUrl = `https://${jiraDomain}/browse/${ticketKey}`;
 
     try {
-        const result = await ipcRenderer.invoke('open-jira-ticket', ticketUrl);
+        const result = await window.ipcRenderer.invoke('open-jira-ticket', ticketUrl);
         if (!result.success) {
             alert(`Failed to open Jira ticket: ${result.error}`);
         }
@@ -933,7 +932,7 @@ async function openJiraTicket(ticketKey) {
 
 async function openSettings() {
     try {
-        await ipcRenderer.invoke('open-settings');
+        await window.ipcRenderer.invoke('open-settings');
     } catch (error) {
         console.error('Error opening settings:', error);
         alert('Error opening settings. Please check the console for details.');
@@ -1272,20 +1271,20 @@ function closeBulkDeleteModal() {
 
 function setupTeamsListeners() {
     // Listen for Teams call events from main process
-    ipcRenderer.on('teams-call-started', (event, callInfo) => {
+    window.ipcRenderer.on('teams-call-started', (event, callInfo) => {
         handleTeamsCallStarted(callInfo);
     });
 
-    ipcRenderer.on('teams-call-ended', (event, callRecord) => {
+    window.ipcRenderer.on('teams-call-ended', (event, callRecord) => {
         handleTeamsCallEnded(callRecord);
     });
 
-    ipcRenderer.on('teams-call-updated', (event, callInfo) => {
+    window.ipcRenderer.on('teams-call-updated', (event, callInfo) => {
         handleTeamsCallUpdated(callInfo);
     });
 
     // Listen for tray menu actions
-    ipcRenderer.on('tray-action', (event, action) => {
+    window.ipcRenderer.on('tray-action', (event, action) => {
         handleTrayAction(action);
     });
 }
@@ -1313,7 +1312,7 @@ function handleTrayAction(action) {
 }
 
 async function updateTimerStateInMain() {
-    await ipcRenderer.invoke('update-timer-state', {
+    await window.ipcRenderer.invoke('update-timer-state', {
         isRunning: currentTask !== null,
         isPaused: isPaused,
         currentTask: currentTask
@@ -1518,7 +1517,7 @@ function showTeamsCallEndNotification(callRecord, taskResumed) {
 }
 
 async function toggleTeamsMonitoring(enabled) {
-    await ipcRenderer.invoke('teams-toggle-monitoring', enabled);
+    await window.ipcRenderer.invoke('teams-toggle-monitoring', enabled);
 }
 
 function updateTeamsStatus(status, message) {
