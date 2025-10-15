@@ -36,7 +36,9 @@
       "Bash(git stash:*)",
       "Bash(nvm install:*)",
       "Bash(export:*)",
-      "Bash(\"/c/Program Files/nodejs/npm\" --version)"
+      "Bash(\"/c/Program Files/nodejs/npm\" --version)",
+      "Bash(git commit:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []
