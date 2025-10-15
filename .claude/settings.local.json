@@ -13,7 +13,14 @@
       "Bash(cat:*)",
       "Bash(pkill:*)",
       "Bash(npm run build-win:*)",
-      "Bash(set CSC_IDENTITY_AUTO_DISCOVERY=false)"
+      "Bash(set CSC_IDENTITY_AUTO_DISCOVERY=false)",
+      "Bash(git remote set-url:*)",
+      "Bash(git branch:*)",
+      "Bash(git fetch:*)",
+      "Bash(git push:*)",
+      "Bash(git pull:*)",
+      "Bash(git add:*)",
+      "Bash(git rebase:*)"
     ],
     "deny": [],
     "ask": []
