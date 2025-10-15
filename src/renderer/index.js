@@ -35,6 +35,7 @@ const exportReportBtn = document.getElementById('exportReportBtn');
 init();
 
 async function init() {
+    loadTheme();
     loadCustomTasks();
     loadRecentTasks();
     updateTodaySummary();
@@ -43,6 +44,31 @@ async function init() {
     checkReporterConfiguration();
     setupEventListeners();
     setupTeamsListeners();
+}
+
+// Theme Management
+function loadTheme() {
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    applyTheme(savedTheme);
+}
+
+function applyTheme(theme) {
+    if (theme === 'dark') {
+        document.body.classList.add('dark-theme');
+        const toggleBtn = document.getElementById('themeToggle');
+        if (toggleBtn) {
+            toggleBtn.textContent = '☀️';
+            toggleBtn.title = 'Toggle Light Mode';
+        }
+    } else {
+        document.body.classList.remove('dark-theme');
+        const toggleBtn = document.getElementById('themeToggle');
+        if (toggleBtn) {
+            toggleBtn.textContent = '🌙';
+            toggleBtn.title = 'Toggle Dark Mode';
+        }
+    }
+    localStorage.setItem('theme', theme);
 }
 
 function setupEventListeners() {
@@ -61,6 +87,16 @@ function setupEventListeners() {
     customTaskInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') addCustomTask();
     });
+
+    // Theme toggle
+    const themeToggle = document.getElementById('themeToggle');
+    if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = localStorage.getItem('theme') || 'light';
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            applyTheme(newTheme);
+        });
+    }
 
     // Settings and reports
     settingsBtn.addEventListener('click', openSettings);
@@ -213,6 +249,9 @@ function startTask(taskName) {
     if (!timerInterval) {
         timerInterval = setInterval(updateTimer, 1000);
     }
+
+    // Update tray menu
+    updateTimerStateInMain();
 }
 
 function togglePause() {
@@ -232,6 +271,9 @@ function togglePause() {
         pauseBtn.textContent = '▶️ Resume';
         timerStatus.textContent = 'Paused';
     }
+
+    // Update tray menu
+    updateTimerStateInMain();
 }
 
 function stopTask() {
@@ -265,6 +307,9 @@ function stopTask() {
     });
 
     updateTodaySummary();
+
+    // Update tray menu
+    updateTimerStateInMain();
 }
 
 function updateTimer() {
@@ -1252,6 +1297,41 @@ function setupTeamsListeners() {
 
     ipcRenderer.on('teams-call-updated', (event, callInfo) => {
         handleTeamsCallUpdated(callInfo);
+    });
+
+    // Listen for tray menu actions
+    ipcRenderer.on('tray-action', (event, action) => {
+        handleTrayAction(action);
+    });
+}
+
+function handleTrayAction(action) {
+    console.log('Tray action received:', action);
+
+    switch(action) {
+        case 'pause':
+            if (currentTask && !isPaused) {
+                togglePause();
+            }
+            break;
+        case 'resume':
+            if (isPaused) {
+                togglePause();
+            }
+            break;
+        case 'stop':
+            if (currentTask) {
+                stopTask();
+            }
+            break;
+    }
+}
+
+async function updateTimerStateInMain() {
+    await ipcRenderer.invoke('update-timer-state', {
+        isRunning: currentTask !== null,
+        isPaused: isPaused,
+        currentTask: currentTask
     });
 }
 

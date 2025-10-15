@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Tray, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, Tray, Menu, globalShortcut, nativeImage } = require('electron');
 const path = require('path');
 const Store = require('electron-store');
 const os = require('os');
@@ -9,6 +9,11 @@ const store = new Store();
 let mainWindow;
 let tray;
 let teamsMonitor;
+let currentTimerState = {
+  isRunning: false,
+  isPaused: false,
+  currentTask: null
+};
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -38,36 +43,94 @@ function createWindow() {
 }
 
 function createTray() {
-  // You'll need to add an icon file later
-  // tray = new Tray(path.join(__dirname, 'assets/tray-icon.png'));
-  
-  const contextMenu = Menu.buildFromTemplate([
-    { 
-      label: 'Show App', 
+  // Create tray icon from existing icon
+  const iconPath = path.join(__dirname, '../../assets/icon.png');
+  const trayIcon = nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 });
+
+  tray = new Tray(trayIcon);
+
+  updateTrayMenu();
+
+  tray.setToolTip('Time Tracker');
+
+  tray.on('click', () => {
+    mainWindow.isVisible() ? mainWindow.hide() : mainWindow.show();
+  });
+}
+
+function updateTrayMenu() {
+  if (!tray) return;
+
+  const menuTemplate = [
+    {
+      label: 'Show App',
       click: () => {
         mainWindow.show();
+        mainWindow.focus();
       }
     },
-    { 
-      label: 'Quit', 
+    { type: 'separator' }
+  ];
+
+  // Add timer controls based on current state
+  if (currentTimerState.isRunning) {
+    if (currentTimerState.currentTask) {
+      menuTemplate.push({
+        label: `Current: ${currentTimerState.currentTask.substring(0, 40)}${currentTimerState.currentTask.length > 40 ? '...' : ''}`,
+        enabled: false
+      });
+    }
+
+    if (currentTimerState.isPaused) {
+      menuTemplate.push({
+        label: '▶️ Resume Timer',
+        click: () => {
+          mainWindow.webContents.send('tray-action', 'resume');
+        }
+      });
+    } else {
+      menuTemplate.push({
+        label: '⏸️ Pause Timer',
+        click: () => {
+          mainWindow.webContents.send('tray-action', 'pause');
+        }
+      });
+    }
+
+    menuTemplate.push({
+      label: '⏹️ Stop Timer',
+      click: () => {
+        mainWindow.webContents.send('tray-action', 'stop');
+      }
+    });
+  } else {
+    menuTemplate.push({
+      label: 'No timer running',
+      enabled: false
+    });
+  }
+
+  menuTemplate.push(
+    { type: 'separator' },
+    {
+      label: 'Quit',
       click: () => {
         app.isQuitting = true;
         app.quit();
       }
     }
-  ]);
+  );
 
-  // tray.setToolTip('Time Tracker');
-  // tray.setContextMenu(contextMenu);
-  
-  // tray.on('click', () => {
-  //   mainWindow.isVisible() ? mainWindow.hide() : mainWindow.show();
-  // });
+  const contextMenu = Menu.buildFromTemplate(menuTemplate);
+  tray.setContextMenu(contextMenu);
 }
 
 app.whenReady().then(() => {
   createWindow();
-  // createTray(); // Uncomment when you add tray icon
+  createTray();
+
+  // Register global shortcuts
+  registerGlobalShortcuts();
 
   // Initialize Teams call monitoring
   // Lazy-load the monitor after app is ready
@@ -88,10 +151,53 @@ app.whenReady().then(() => {
   }
 });
 
+function registerGlobalShortcuts() {
+  // Ctrl+Shift+T to toggle pause/resume
+  const ret = globalShortcut.register('CommandOrControl+Shift+T', () => {
+    if (currentTimerState.isRunning) {
+      if (currentTimerState.isPaused) {
+        mainWindow.webContents.send('tray-action', 'resume');
+      } else {
+        mainWindow.webContents.send('tray-action', 'pause');
+      }
+    } else {
+      // Show window if no timer is running
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+
+  if (!ret) {
+    console.log('Global shortcut registration failed');
+  }
+
+  // Ctrl+Shift+S to stop timer
+  globalShortcut.register('CommandOrControl+Shift+S', () => {
+    if (currentTimerState.isRunning) {
+      mainWindow.webContents.send('tray-action', 'stop');
+    }
+  });
+
+  // Ctrl+Shift+W to show/hide window
+  globalShortcut.register('CommandOrControl+Shift+W', () => {
+    if (mainWindow.isVisible()) {
+      mainWindow.hide();
+    } else {
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+}
+
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
+});
+
+app.on('will-quit', () => {
+  // Unregister all shortcuts
+  globalShortcut.unregisterAll();
 });
 
 app.on('activate', () => {
@@ -249,4 +355,22 @@ ipcMain.handle('open-jira-ticket', async (event, ticketUrl) => {
     console.error('Error opening Jira ticket:', error);
     return { success: false, error: error.message };
   }
+});
+
+// Update timer state from renderer (for tray menu updates)
+ipcMain.handle('update-timer-state', (event, state) => {
+  currentTimerState = { ...currentTimerState, ...state };
+  updateTrayMenu();
+
+  // Update tray tooltip
+  if (tray) {
+    if (state.isRunning && state.currentTask) {
+      const status = state.isPaused ? 'Paused' : 'Running';
+      tray.setToolTip(`Time Tracker - ${status}: ${state.currentTask.substring(0, 50)}`);
+    } else {
+      tray.setToolTip('Time Tracker');
+    }
+  }
+
+  return true;
 });

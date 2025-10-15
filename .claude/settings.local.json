@@ -38,7 +38,9 @@
       "Bash(export:*)",
       "Bash(\"/c/Program Files/nodejs/npm\" --version)",
       "Bash(git commit:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(./node_modules/.bin/electron.cmd:*)",
+      "Bash(npm run rebuild:*)"
     ],
     "deny": [],
     "ask": []

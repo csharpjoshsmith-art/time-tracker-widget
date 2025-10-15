@@ -2,12 +2,14 @@
   "name": "time-tracker-widget",
   "version": "1.0.0",
   "description": "Desktop time tracking widget with Jira integration",
-  "main": "src/main/index.js",
+  "main": "main.js",
   "scripts": {
     "start": "npm run kill && electron .",
     "dev": "npm run kill && electron . --dev",
     "kill": "taskkill //F //IM electron.exe || echo No Electron processes to kill",
-    "build-win": "electron-builder --win",
+    "rebuild": "electron-rebuild -f -w better-sqlite3",
+    "postinstall": "npm run rebuild",
+    "build-win": "set CSC_IDENTITY_AUTO_DISCOVERY=false && electron-builder --win",
     "build-mac": "electron-builder --mac",
     "build-all": "electron-builder --win --mac"
   },
@@ -19,15 +21,17 @@
   "author": "Your Name",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^38.3.0",
+    "better-sqlite3": "^12.4.1",
     "electron-builder": "^24.9.1",
-    "electron-packager": "^17.1.2"
+    "electron-packager": "^17.1.2",
+    "electron-rebuild": "^3.2.9"
   },
   "dependencies": {
     "@azure/msal-node": "^3.8.0",
     "@microsoft/microsoft-graph-client": "^3.0.7",
     "active-win": "^8.2.1",
     "axios": "^1.6.0",
+    "electron": "^31.0.0",
     "electron-store": "^8.2.0",
     "node-fetch": "^2.7.0"
   },
@@ -37,6 +41,20 @@
     "directories": {
       "output": "D:/My_Projects_Repos/time-tracker-builds"
     },
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**/*"
+    ],
+    "files": [
+      "**/*",
+      "!node_modules/better-sqlite3/build/Release/better_sqlite3.node"
+    ],
+    "extraResources": [
+      {
+        "from": "node_modules/better-sqlite3/build/Release",
+        "to": "better-sqlite3",
+        "filter": ["*.node"]
+      }
+    ],
     "win": {
       "target": "portable",
       "icon": "assets/icon.ico",
