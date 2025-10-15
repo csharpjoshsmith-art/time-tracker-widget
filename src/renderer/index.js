@@ -1,4 +1,5 @@
-const axios = require('axios');
+// All API calls are handled through IPC in the main process
+// No direct requires needed in renderer with contextIsolation
 
 // State Management
 let timerInterval = null;
@@ -661,35 +662,6 @@ async function fetchJiraTickets() {
     }
 }
 
-async function fetchJiraTicketsAlternative(settings, statusDiv) {
-    try {
-        const auth = Buffer.from(`${settings.email}:${settings.apiToken}`).toString('base64');
-        
-        // Try with a simpler JQL query
-        const response = await axios({
-            method: 'post',
-            url: `https://${settings.domain}/rest/api/3/search`,
-            headers: {
-                'Authorization': `Basic ${auth}`,
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            },
-            data: {
-                jql: 'assignee = currentUser() AND resolution = Unresolved AND status NOT IN (Done, Installed) ORDER BY project ASC, updated DESC',
-                maxResults: 100,
-                fields: ['summary', 'key', 'status', 'project']
-            }
-        });
-
-        displayJiraTickets(response.data.issues);
-        statusDiv.textContent = `Found ${response.data.issues.length} tickets`;
-        statusDiv.style.color = '#27ae60';
-    } catch (error) {
-        console.error('Alternative Jira fetch also failed:', error);
-        statusDiv.textContent = 'Error fetching tickets';
-        statusDiv.style.color = '#e74c3c';
-    }
-}
 
 function displayProjectSidebar(issues) {
     const sidebar = document.getElementById('projectSidebar');
