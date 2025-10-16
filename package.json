@@ -2,7 +2,7 @@
   "name": "time-tracker-widget",
   "version": "1.0.0",
   "description": "Desktop time tracking widget with Jira integration",
-  "main": "main.js",
+  "main": "src/main/index.js",
   "scripts": {
     "start": "npm run kill && electron .",
     "dev": "npm run kill && electron . --dev",
@@ -19,7 +19,7 @@
   "author": "Your Name",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^28.0.0",
+    "electron": "^38.3.0",
     "electron-builder": "^24.9.1",
     "electron-packager": "^17.1.2"
   },
@@ -28,7 +28,7 @@
     "@microsoft/microsoft-graph-client": "^3.0.7",
     "active-win": "^8.2.1",
     "axios": "^1.6.0",
-    "electron-store": "^8.1.0",
+    "electron-store": "^8.2.0",
     "node-fetch": "^2.7.0"
   },
   "build": {
